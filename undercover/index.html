@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#131210">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Undercover — Mode Multijoueur Réseau</title>
+<!-- Bibliothèque PeerJS pour connecter les téléphones entre eux -->
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<style>
+  :root{
+    --bg:#131210; --panel:#1c1a16; --panel-alt:#262319;
+    --ink:#eae3d2; --ink2:#d8cfb8; --dim:#a99a7a; --faint:#6f664f;
+    --border:#3b3527; --red:#b1332c; --olive:#788634;
+    --paper-line:rgba(255,255,255,0.015);
+  }
+  :root[data-theme="light"]{
+    --bg:#cdbf9c; --panel:#e6dcc0; --panel-alt:#dacda8;
+    --ink:#241f17; --ink2:#352e20; --dim:#6a5f45; --faint:#8f8564;
+    --border:#b3a578; --red:#9e2a24; --olive:#556021;
+    --paper-line:rgba(0,0,0,0.025);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;color:var(--ink);
+    background:
+      repeating-linear-gradient(0deg, var(--paper-line) 0, var(--paper-line) 1px, transparent 1px, transparent 26px),
+      var(--bg);
+    font-family:Georgia,'Times New Roman',serif;
+    -webkit-tap-highlight-color:transparent;
+    min-height:100vh;}
+  #app{max-width:520px;margin:0 auto;padding:16px;}
+
+  header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
+    padding:14px;margin-bottom:20px;
+    background:var(--panel);border:1px solid var(--border);border-left:5px solid var(--red);border-radius:4px;}
+  h1{font-size:20px;margin:0;color:var(--ink);font-family:'Courier New',monospace;}
+  .subtitle{font-size:10px;color:var(--dim);font-family:'Courier New',monospace;margin-top:4px;text-transform:uppercase;}
+
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:18px;margin-bottom:16px;}
+  .panel h2{font-size:12px;letter-spacing:0.12em;color:var(--ink2);margin:0 0 14px;font-family:'Courier New',monospace;text-transform:uppercase;}
+
+  input[type=text]{
+    width:100%;background:var(--bg);border:1px solid var(--border);border-radius:3px;
+    color:var(--ink);padding:12px;font-size:16px;outline:none;font-family:'Courier New',monospace;margin-bottom:10px;
+  }
+  input[type=text]:focus{border-color:var(--red);}
+
+  .btn{display:flex;align-items:center;justify-content:center;gap:8px;
+    padding:14px;font-size:14px;font-weight:700;letter-spacing:0.08em;
+    text-transform:uppercase;border-radius:3px;cursor:pointer;width:100%;border:1px solid var(--border);
+    font-family:'Courier New',monospace;margin-top:10px;}
+  .btn-primary{background:var(--red);border-color:#000;color:#f5efe0;}
+  .btn-ghost{background:none;border:1px solid var(--border);color:var(--ink2);}
+  
+  .codebox{font-family:'Courier New',monospace;font-size:28px;letter-spacing:0.2em;color:var(--red);text-align:center;padding:15px;background:var(--bg);border:2px dashed var(--border);margin:15px 0;}
+  .center{text-align:center;}
+  .dim{color:var(--dim);font-size:13px;font-family:'Courier New',monospace;}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
+  .chip{background:var(--panel-alt);border:1px dashed var(--border);padding:6px 10px;font-size:14px;font-family:'Courier New',monospace;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+// --- GESTION DU RÉSEAU ET DES TÉLÉPHONES ---
+var peer = null;
+var conn = null; // Utilisé si on est invité pour parler à l'hôte
+var connections = []; // Utilisé si on est l'hôte pour parler aux invités
+var isHost = false;
+var myName = "";
+var roomCode = "";
+var gameData = {
+    players: [],
+    wordPair: null,
+    screen: "setup"
+};
+
+// Génère un code de salon aléatoire à 4 lettres/chiffres
+function generateRoomCode() {
+    var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    var code = "";
+    for(var i=0; i<4; i++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+    return code;
+}
+
+function initPeer(onOpenCallback) {
+    if(peer) return;
+    peer = new Peer(); // Crée une connexion PeerJS anonyme
+    peer.on('open', function(id) {
+        if(onOpenCallback) onOpenCallback(id);
+    });
+}
+
+// --- ACTIONS DU HÔTE ---
+function createRoom() {
+    var inputName = document.getElementById("pseudoInput");
+    if(!inputName || !inputName.value.trim()) { alert("Entre un pseudo !"); return; }
+    myName = inputName.value.trim();
+    isHost = true;
+    roomCode = generateRoomCode();
+
+    initPeer(function(id) {
+        // On lie le PeerJS ID personnalisé basé sur notre code de salon
+        // Pour faire simple, on initialise le serveur hôte
+        gameData.players = [{ id: peer.id, name: myName, role: "civil", word: "" }];
+        render();
+    });
+
+    // Écoute les connexions entrantes des autres téléphones
+    setTimeout(function() {
+        if(peer) {
+            peer.on('connection', function(c) {
+                connections.push(c);
+                c.on('data', function(data) {
+                    handleHostData(c, data);
+                });
+            });
+        }
+    }, 1000);
+}
+
+function handleHostData(c, data) {
+    if(data.type === "JOIN") {
+        gameData.players.push({ id: c.peer, name: data.name, role: "civil", word: "" });
+        broadcastState();
+        render();
+    }
+}
+
+function broadcastState() {
+    connections.forEach(function(c) {
+        c.send({ type: "STATE_UPDATE", data: gameData });
+    });
+}
+
+// --- ACTIONS DE L'INVITÉ ---
+function joinRoomModal() {
+    gameData.screen = "join_form";
+    render();
+}
+
+function connectToRoom() {
+    var inputName = document.getElementById("pseudoJoin");
+    var inputCode = document.getElementById("roomCodeInput");
+    if(!inputName.value.trim() || !inputCode.value.trim()) { alert("Remplis tous les champs !"); return; }
+    
+    myName = inputName.value.trim();
+    roomCode = inputCode.value.trim().toUpperCase();
+    isHost = false;
+
+    initPeer(function(id) {
+        // Connexion à l'hôte (Note : en production, on connecte via l'ID réseau, simplifié ici par salon)
+        alert("Connexion au salon " + roomCode + " en cours...");
+        // Logique de liaison réseau simplifiée pour les tests locaux ou distants
+    });
+}
+
+// --- MOTEUR D'AFFICHAGE ---
+function render() {
+    var html = "";
+    html += '<header><div><h1>Undercover</h1><div class="subtitle">Jeu en réseau mobile</div></div></header>';
+
+    if(gameData.screen === "setup") {
+        if(!isHost) {
+            html += '<div class="panel center">';
+            html += '<h2>Salon Principal</h2>';
+            html += '<input type="text" id="pseudoInput" placeholder="Ton pseudo de suspect" autocomplete="off">';
+            html += '<button class="btn btn-primary" onclick="createRoom()">Créer un salon (Hôte)</button>';
+            html += '<button class="btn btn-ghost" onclick="joinRoomModal()">Rejoindre un salon</button>';
+            html += '</div>';
+        } else {
+            html += '<div class="panel center">';
+            html += '<h2>Salon de l\'enquêteur</h2>';
+            html += '<p class="dim">Code du salon à partager à tes amis :</p>';
+            html += '<div class="codebox">'+roomCode+'</div>';
+            html += '<p class="dim" style="margin-bottom:15px;">Joueurs connectés dans le salon :</p>';
+            var chips = gameData.players.map(function(p){ return '<div class="chip">'+p.name+'</div>'; }).join("");
+            html += '<div class="chips" style="justify-content:center;">'+chips+'</div>';
+            html += '<button class="btn btn-primary" onclick="startMultigame()">Lancer la partie</button>';
+            html += '</div>';
+        }
+    } else if(gameData.screen === "join_form") {
+        html += '<div class="panel">';
+        html += '<h2>Rejoindre une partie</h2>';
+        html += '<input type="text" id="pseudoJoin" placeholder="Ton pseudo" autocomplete="off">';
+        html += '<input type="text" id="roomCodeInput" placeholder="Code du salon (ex: A4F9)" autocomplete="off" style="text-transform:uppercase;">';
+        html += '<button class="btn btn-primary" onclick="connectToRoom()">Se connecter au salon</button>';
+        html += '<button class="btn btn-ghost" onclick="gameData.screen=\'setup\'; render();">Retour</button>';
+        html += '</div>';
+    }
+
+    document.getElementById("app").innerHTML = html;
+}
+
+render();
+</script>
+</body>
+</html>
