@@ -3,101 +3,281 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#131210">
+<meta name="theme-color" content="#0b0616">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Undercover — Mode Multijoueur Réseau</title>
-<!-- Intégration de la bibliothèque PeerJS pour connecter les téléphones en P2P -->
+<title>Undercover — Salle d'Arcade Edition</title>
+<!-- Polices rétro de la salle d'arcade -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<!-- PeerJS pour le réseau mobile -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <style>
-  :root{
-    --bg:#131210; --panel:#1c1a16; --panel-alt:#262319;
-    --ink:#eae3d2; --ink2:#d8cfb8; --dim:#a99a7a; --faint:#6f664f;
-    --border:#3b3527; --red:#b1332c; --olive:#788634;
-    --paper-line:rgba(255,255,255,0.015);
+  :root {
+    --bg-color: #0b0616;
+    --card-bg: #140a26;
+    --grid-line: rgba(255, 46, 136, 0.10);
+    --border-color: rgba(255, 46, 136, 0.35);
+    --text-main: #f3e9ff;
+    --text-sub: #9d8bc4;
+    --accent: #ff2e88;
+    --neon-yellow: #ffe14d;
+    --neon-cyan: #22e6ff;
+    --font-display: 'Press Start 2P', monospace;
+    --font-body: 'VT323', monospace;
   }
-  :root[data-theme="light"]{
-    --bg:#cdbf9c; --panel:#e6dcc0; --panel-alt:#dacda8;
-    --ink:#241f17; --ink2:#352e20; --dim:#6a5f45; --faint:#8f8564;
-    --border:#b3a578; --red:#9e2a24; --olive:#556021;
-    --paper-line:rgba(0,0,0,0.025);
+  :root[data-theme="light"] {
+    --bg-color: #cdbf9c;
+    --card-bg: #e6dcc0;
+    --grid-line: rgba(0, 0, 0, 0.03);
+    --border-color: rgba(179, 165, 120, 0.8);
+    --text-main: #241f17;
+    --text-sub: #6a5f45;
+    --accent: #9e2a24;
+    --neon-yellow: #556021;
+    --neon-cyan: #225588;
   }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;color:var(--ink);
-    background:
-      repeating-linear-gradient(0deg, var(--paper-line) 0, var(--paper-line) 1px, transparent 1px, transparent 26px),
-      var(--bg);
-    font-family:Georgia,'Times New Roman',serif;
-    -webkit-tap-highlight-color:transparent;
-    min-height:100vh;}
-  #app{max-width:520px;margin:0 auto;padding:16px;}
 
-  header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
-    padding:14px;margin-bottom:20px;
-    background:var(--panel);border:1px solid var(--border);border-left:5px solid var(--red);border-radius:4px;}
-  h1{font-size:20px;margin:0;color:var(--ink);font-family:'Courier New',monospace;}
-  .subtitle{font-size:10px;color:var(--dim);font-family:'Courier New',monospace;margin-top:4px;text-transform:uppercase;}
-
-  .panel{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:18px;margin-bottom:16px;}
-  .panel h2{font-size:12px;letter-spacing:0.12em;color:var(--ink2);margin:0 0 14px;font-family:'Courier New',monospace;text-transform:uppercase;}
-
-  input[type=text]{
-    width:100%;background:var(--bg);border:1px solid var(--border);border-radius:3px;
-    color:var(--ink);padding:12px;font-size:16px;outline:none;font-family:'Courier New',monospace;margin-bottom:10px;
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { background: var(--bg-color); }
+  body {
+    font-family: var(--font-body);
+    background-color: var(--bg-color);
+    background-image:
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px),
+        radial-gradient(circle at 50% 0%, rgba(255, 46, 136, 0.15) 0%, transparent 55%);
+    background-size: 40px 40px, 40px 40px, 100% 100%;
+    color: var(--text-main);
+    min-height: 100vh;
+    padding: 20px 16px 60px;
+    position: relative;
+    font-size: 1.25rem;
   }
-  input[type=text]:focus{border-color:var(--red);}
 
-  .btn{display:flex;align-items:center;justify-content:center;gap:8px;
-    padding:14px;font-size:14px;font-weight:700;letter-spacing:0.08em;
-    text-transform:uppercase;border-radius:3px;cursor:pointer;width:100%;border:1px solid var(--border);
-    font-family:'Courier New',monospace;margin-top:10px;}
-  .btn-primary{background:var(--red);border-color:#000;color:#f5efe0;}
-  .btn-ghost{background:none;border:1px solid var(--border);color:var(--ink2);}
+  /* Effet grille téléviseur rétro */
+  body::after {
+    content: "";
+    position: fixed; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0px, rgba(0,0,0,0) 2px, rgba(0,0,0,0.18) 3px, rgba(0,0,0,0.18) 4px);
+    z-index: 100; mix-blend-mode: multiply;
+  }
+
+  #app { max-width: 600px; margin: 0 auto; position: relative; z-index: 10; }
+
+  header {
+    background: var(--card-bg);
+    border: 2px solid var(--accent);
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 0 0 4px var(--bg-color), 6px 6px 0 rgba(0,0,0,0.6), 0 0 20px rgba(255,46,136,0.2);
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+  }
+  h1 { font-family: var(--font-display); font-size: 0.9rem; color: var(--accent); text-shadow: 0 0 8px rgba(255,46,136,0.8); margin: 0; }
+  .subtitle { font-size: 1rem; color: var(--text-sub); margin-top: 4px; }
+  .headerbtns { display: flex; gap: 8px; flex-wrap: wrap; }
   
-  .codebox{font-family:'Courier New',monospace;font-size:28px;letter-spacing:0.2em;color:var(--red);text-align:center;padding:15px;background:var(--bg);border:2px dashed var(--border);margin:15px 0;}
-  .center{text-align:center;}
-  .dim{color:var(--dim);font-size:13px;font-family:'Courier New',monospace;}
-  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
-  .chip{background:var(--panel-alt);border:1px dashed var(--border);padding:6px 10px;font-size:14px;font-family:'Courier New',monospace;}
-  .wordbig{font-size:28px;color:var(--ink);font-family:'Courier New',monospace;margin-top:10px;}
+  .themebtn, .iconbtn {
+    font-family: var(--font-display); font-size: 0.5rem;
+    background: rgba(255, 46, 136, 0.08); border: 2px solid var(--accent);
+    color: var(--accent); padding: 8px 10px; cursor: pointer;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+  }
+  .themebtn:active, .iconbtn:active { transform: translateY(2px); box-shadow: none; }
+
+  .panel {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    padding: 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 0 0 4px var(--bg-color), 6px 6px 0 rgba(0,0,0,0.6);
+  }
+  .panel h2 {
+    font-family: var(--font-display);
+    font-size: 0.75rem;
+    color: var(--neon-cyan);
+    margin-bottom: 14px;
+    text-shadow: 0 0 6px rgba(34,230,255,0.4);
+  }
+
+  input[type=text], select {
+    width: 100%; background: var(--bg-color); border: 2px solid var(--border-color);
+    color: var(--text-main); padding: 10px; font-size: 1.25rem; font-family: var(--font-body);
+    outline: none; margin-bottom: 10px;
+  }
+  input[type=text]:focus, select:focus { border-color: var(--accent); }
+
+  .btn {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    width: 100%; padding: 14px; font-family: var(--font-display); font-size: 0.65rem;
+    cursor: pointer; border: none; box-shadow: 4px 4px 0 rgba(0,0,0,0.7);
+    text-transform: uppercase; text-align: center; margin-top: 10px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; text-shadow: 0 0 6px rgba(0,0,0,0.5); }
+  .btn-primary:active { transform: translateY(2px); box-shadow: 2px 2px 0 rgba(0,0,0,0.7); }
+  .btn-ghost { background: transparent; border: 2px solid var(--accent); color: var(--text-main); }
+  .btn-small { width: auto; padding: 8px 12px; font-size: 0.5rem; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .chip {
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,0,0,0.3); border: 1px dashed var(--border-color);
+    padding: 6px 10px; font-size: 1.2rem;
+  }
+  .chip button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 1.2rem; }
+
+  .row { display: flex; align-items: center; justify-content:space-between; padding: 8px 0; }
+  .stepper { display: flex; align-items: center; gap: 10px; }
+  .stepper button {
+    width: 32px; height: 32px; background: var(--bg-color);
+    border: 2px solid var(--border-color); color: var(--text-main);
+    font-family: var(--font-display); font-size: 0.8rem; cursor: pointer;
+  }
+  .stepper .val { width: 30px; text-align: center; font-size: 1.4rem; }
+
+  .stamp {
+    display: inline-block; border: 3px double var(--accent); color: var(--accent);
+    padding: 10px 20px; font-family: var(--font-display); font-size: 0.8rem;
+    text-transform: uppercase; transform: rotate(-2deg); text-shadow: 0 0 6px rgba(255,46,136,0.6);
+  }
+  .stamp.olive { border-color: var(--neon-cyan); color: var(--neon-cyan); text-shadow: 0 0 6px rgba(34,230,255,0.6); }
+
+  .wordbig { font-family: var(--font-display); font-size: 1.6rem; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,225,77,0.7); margin-top: 10px; }
+  .center { text-align: center; }
+  .dim { color: var(--text-sub); }
+  .warn { color: #ff5555; font-size: 1rem; margin-top: 6px; }
+  .codebox { font-family: var(--font-display); font-size: 1.5rem; letter-spacing: 0.2em; color: var(--neon-yellow); text-align: center; padding: 15px; background: var(--bg-color); border: 2px dashed var(--border-color); margin: 10px 0; }
+  .linkbtn { background: none; border: none; color: var(--text-sub); font-size: 1.1rem; cursor: pointer; text-decoration: underline; display: block; margin: 10px auto; font-family: var(--font-body); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
 </style>
 </head>
 <body>
 <div id="app"></div>
-
 <script>
-// --- BIBLIOTHÈQUE DE PAIRES DE MOTS DE TEST ---
+
+// Bibliothèque complète des 208 paires de mots d'origine
 var BUILTIN_PAIRS = [
-  { theme:"Nourriture", civil:"Pizza", undercover:"Burger" },
-  { theme:"Nourriture", civil:"Chocolat", undercover:"Bonbon" },
-  { theme:"Animaux", civil:"Chien", undercover:"Chat" },
-  { theme:"Sport", civil:"Football", undercover:"Basketball" }
+  { theme:"Nourriture", difficulty:"facile", civil:"Pizza", undercover:"Burger" },
+  { theme:"Nourriture", difficulty:"facile", civil:"Chocolat", undercover:"Bonbon" },
+  { theme:"Nourriture", difficulty:"facile", civil:"Frite", undercover:"Chips" },
+  { theme:"Nourriture", difficulty:"facile", civil:"Pomme", undercover:"Poire" },
+  { theme:"Nourriture", difficulty:"facile", civil:"Pain", undercover:"Biscotte" },
+  { theme:"Nourriture", difficulty:"facile", civil:"Gâteau", undercover:"Tarte" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Croissant", undercover:"Baguette" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Fromage", undercover:"Yaourt" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Pâtes", undercover:"Riz" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Ketchup", undercover:"Mayonnaise" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Beurre", undercover:"Margarine" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Saucisson", undercover:"Jambon" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Lasagne", undercover:"Moussaka" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Chili con carne", undercover:"Fajitas" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Tarte", undercover:"Quiche" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Crêpe", undercover:"Gaufre" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Moutarde", undercover:"Wasabi" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Raclette", undercover:"Fondue" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Confiture", undercover:"Miel" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Mandarine", undercover:"Clémentine" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Pêche", undercover:"Nectarine" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Marron", undercover:"Châtaigne" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Brie", undercover:"Camembert" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Éclair", undercover:"Religieuse" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Muffin", undercover:"Cupcake" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Sorbet", undercover:"Glace" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Caquelon", undercover:"Marmite" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Béchamel", undercover:"Vinaigrette" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Safran", undercover:"Curcuma" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Meringue", undercover:"Macaron" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Couscous", undercover:"Tajine" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Ail", undercover:"Oignon" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Sucre", undercover:"Édulcorant" },
+
+  // --- BOISSONS ---
+  { theme:"Boissons", difficulty:"facile", civil:"Café", undercover:"Thé" },
+  { theme:"Boissons", difficulty:"facile", civil:"Eau", undercover:"Jus d'orange" },
+  { theme:"Boissons", difficulty:"facile", civil:"Chocolat chaud", undercover:"Cappuccino" },
+  { theme:"Boissons", difficulty:"moyen", civil:"Vin", undercover:"Champagne" },
+  { theme:"Boissons", difficulty:"moyen", civil:"Smoothie", undercover:"Milkshake" },
+  { theme:"Boissons", difficulty:"moyen", civil:"Bière", undercover:"Panaché" },
+  { theme:"Boissons", difficulty:"moyen", civil:"Sirop", undercover:"Limonade" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Cidre", undercover:"Poiré" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Eau pétillante", undercover:"Eau plate" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Thé vert", undercover:"Thé noir" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Vin rouge", undercover:"Vin blanc" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Whisky", undercover:"Bourbon" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Tisane", undercover:"Infusion" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Kéfir", undercover:"Kombucha" },
+
+  // --- ANIMAUX ---
+  { theme:"Animaux", difficulty:"facile", civil:"Chien", undercover:"Chat" },
+  { theme:"Animaux", difficulty:"facile", civil:"Lion", undercover:"Tigre" },
+  { theme:"Animaux", difficulty:"facile", civil:"Cheval", undercover:"Âne" },
+  { theme:"Animaux", difficulty:"facile", civil:"Vache", undercover:"Chèvre" },
+  { theme:"Animaux", difficulty:"moyen", civil:"Aigle", undercover:"Faucon" },
+  { theme:"Animaux", difficulty:"moyen", civil:"Dauphin", undercover:"Requin" },
+  { theme:"Animaux", difficulty:"moyen", civil:"Abeille", undercover:"Guêpe" },
+  { theme:"Animaux", difficulty:"moyen", civil:"Loup", undercover:"Renard" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Corbeau", undercover:"Corneille" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Alpaga", undercover:"Lama" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Crapaud", undercover:"Grenouille" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Chameau", undercover:"Dromadaire" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Poulpe", undercover:"Calmar" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Pingouin", undercover:"Manchot" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Chouette", undercover:"Hibou" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Alligator", undercover:"Crocodile" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Léopard", undercover:"Guépard" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Mouette", undercover:"Goéland" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Lièvre", undercover:"Lapin" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Orignal", undercover:"Wapiti" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Morses", undercover:"Caribou" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Otarie", undercover:"Phoque" },
+
+  // --- SPORT ---
+  { theme:"Sport", difficulty:"facile", civil:"Football", undercover:"Basketball" },
+  { theme:"Sport", difficulty:"facile", civil:"Course", undercover:"Marche" },
+  { theme:"Sport", difficulty:"moyen", civil:"Tennis", undercover:"Badminton" },
+  { theme:"Sport", difficulty:"moyen", civil:"Rugby", undercover:"Football américain" },
+  { theme:"Sport", difficulty:"moyen", civil:"Ski", undercover:"Snowboard" },
+  { theme:"Sport", difficulty:"difficile", civil:"Escalade", undercover:"Alpinisme" },
+  { theme:"Sport", difficulty:"difficile", civil:"Judo", undercover:"Karaté" },
+  { theme:"Sport", difficulty:"difficile", civil:"Surf", undercover:"Planche à voile" },
+  { theme:"Sport", difficulty:"difficile", civil:"Kayak", undercover:"Canoë" },
+  { theme:"Sport", difficulty:"difficile", civil:"Marathon", undercover:"Triathlon" }
 ];
 
-// --- VARIABLES DE GESTION RÉSEAU ET JEU ---
+var ROLE_LABEL = { civil:"Civil", undercover:"Undercover", white:"Mr. White" };
+
 var peer = null;
-var conn = null; // Connexion vers l'hôte (pour les invités)
-var connections = []; // Liste des connexions entrantes (pour l'hôte)
+var conn = null;
+var connections = [];
 var isHost = false;
 var myName = "";
 var roomCode = "";
-var gameData = {
-    players: [],
-    wordPair: null,
-    screen: "setup"
+
+var state = {
+  gameMode: null,
+  screen: "mode_select",
+  playerNames:["Joueur 1","Joueur 2","Joueur 3","Joueur 4"],
+  numUndercover:1, numWhite:0,
+  theme:"Aléatoire", difficulty:"Aléatoire",
+  isGameMaster:false, customCivil:"", customUndercover:"",
+  blindMode:false,
+  library:[], gameHistory:[],
+  showLibrary:false, showStats:false,
+  players:[], wordPair:null,
+  revealIndex:0, revealed:false,
+  round:1, clueOrder:[], clueTurn:0,
+  eliminations:[], selectedVote:null, justEliminated:null,
+  winner:null,
+  themeMode:"dark"
 };
 
-// Fonction utilitaire pour mélanger un tableau
-function shuffle(arr){
-  var a = arr.slice();
-  for(var i=a.length-1; i>0; i--){
-    var j = Math.floor(Math.random()*(i+1));
-    var t = a[i]; a[i] = a[j]; a[j] = t;
-  }
-  return a;
+function selectMode(mode) {
+    state.gameMode = mode;
+    state.screen = (mode === "local") ? "setup" : "net_home";
+    render();
 }
 
-// Génère un code de salon aléatoire à 4 caractères
 function generateRoomCode() {
     var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     var code = "";
@@ -108,176 +288,478 @@ function generateRoomCode() {
 function initPeer(onOpenCallback) {
     if(peer) return;
     peer = new Peer();
-    peer.on('open', function(id) {
-        if(onOpenCallback) onOpenCallback(id);
-    });
+    peer.on('open', function(id) { if(onOpenCallback) onOpenCallback(id); });
 }
 
-// --- LOGIQUE HÔTE ---
-function createRoom() {
-    var inputName = document.getElementById("pseudoInput");
-    if(!inputName || !inputName.value.trim()) { alert("Entre un pseudo !"); return; }
-    myName = inputName.value.trim();
+function startHosting() {
     isHost = true;
     roomCode = generateRoomCode();
-
-    if(peer) peer.destroy();
-    peer = new Peer(roomCode); // Fixe l'identifiant PeerJS avec le code du salon
-
-    peer.on('open', function(id) {
-        gameData.players = [{ id: id, name: myName, role: "civil", word: "" }];
-        render();
-    });
-
-    peer.on('connection', function(c) {
-        connections.push(c);
-        c.on('data', function(data) {
-            handleHostData(c, data);
+    initPeer(function(id) {
+        if(peer) peer.destroy();
+        peer = new Peer(roomCode);
+        peer.on('open', function() {
+            state.screen = "setup";
+            render();
+        });
+        peer.on('connection', function(c) {
+            connections.push(c);
+            c.on('data', function(data) {
+                if(data.type === "JOIN") {
+                    state.playerNames.push(data.name);
+                    broadcastState();
+                    render();
+                }
+            });
         });
     });
-}
-
-function handleHostData(c, data) {
-    if(data.type === "JOIN") {
-        gameData.players.push({ id: c.peer, name: data.name, role: "civil", word: "" });
-        broadcastState();
-        render();
-    }
 }
 
 function broadcastState() {
     connections.forEach(function(c) {
-        c.send({ type: "STATE_UPDATE", data: gameData });
+        c.send({ type: "STATE_UPDATE", data: state });
     });
 }
 
-// --- LANCEMENT DE LA PARTIE PAR L'HÔTE ---
-function startMultigame() {
-    if(!isHost) return;
-
-    // 1. Choisir un mot aléatoire
-    var pair = BUILTIN_PAIRS[Math.floor(Math.random() * BUILTIN_PAIRS.length)];
-    gameData.wordPair = pair;
-
-    // 2. Assigner les rôles à tous les joueurs connectés
-    var order = shuffle(gameData.players.map(function(_, i) { return i; }));
-
-    gameData.players.forEach(function(p) {
-        p.role = "civil";
-        p.word = pair.civil;
-    });
-
-    // Mettre un undercover
-    if(order.length > 0) {
-        var undIdx = order[0];
-        gameData.players[undIdx].role = "undercover";
-        gameData.players[undIdx].word = pair.undercover;
-    }
-
-    // 3. Basculer sur l'écran de révélation pour tout le monde
-    gameData.screen = "reveal";
-
-    // 4. Synchroniser avec les invités
-    broadcastState();
-    render();
-}
-
-// --- LOGIQUE INVITÉ ---
-function joinRoomModal() {
-    gameData.screen = "join_form";
+function joinRoomForm() {
+    isHost = false;
+    state.screen = "join_form";
     render();
 }
 
 function connectToRoom() {
-    var inputName = document.getElementById("pseudoJoin");
-    var inputCode = document.getElementById("roomCodeInput");
+    var nameInput = document.getElementById("pseudoJoin");
+    var codeInput = document.getElementById("roomCodeInput");
+    if(!nameInput.value.trim() || !codeInput.value.trim()) { alert("Remplis tous les champs !"); return; }
     
-    if(!inputName.value.trim() || !inputCode.value.trim()) { 
-        alert("Remplis tous les champs !"); 
-        return; 
-    }
-    
-    myName = inputName.value.trim();
-    roomCode = inputCode.value.trim().toUpperCase();
-    isHost = false;
+    myName = nameInput.value.trim();
+    roomCode = codeInput.value.trim().toUpperCase();
 
     initPeer(function(id) {
         conn = peer.connect(roomCode);
-
         conn.on('open', function() {
             conn.send({ type: "JOIN", name: myName });
-            gameData.screen = "waiting_room";
+            state.screen = "waiting_room";
             render();
         });
-
         conn.on('data', function(data) {
             if(data.type === "STATE_UPDATE") {
-                gameData = data.data;
+                state = data.data;
                 render();
             }
-        });
-
-        conn.on('error', function(err) {
-            alert("Impossible de se connecter au salon. Vérifie le code.");
-            console.error(err);
         });
     });
 }
 
-// --- MOTEUR D'AFFICHAGE ---
-function render() {
-    var html = "";
-    html += '<header><div><h1>Undercover</h1><div class="subtitle">Jeu en réseau mobile</div></div></header>';
-
-    if(gameData.screen === "setup") {
-        if(!isHost) {
-            html += '<div class="panel center">';
-            html += '<h2>Salon Principal</h2>';
-            html += '<input type="text" id="pseudoInput" placeholder="Ton pseudo de suspect" autocomplete="off">';
-            html += '<button class="btn btn-primary" onclick="createRoom()">Créer un salon (Hôte)</button>';
-            html += '<button class="btn btn-ghost" onclick="joinRoomModal()">Rejoindre un salon</button>';
-            html += '</div>';
-        } else {
-            html += '<div class="panel center">';
-            html += '<h2>Salon de l\'enquêteur</h2>';
-            html += '<p class="dim">Code du salon à partager à tes amis :</p>';
-            html += '<div class="codebox">'+roomCode+'</div>';
-            html += '<p class="dim" style="margin-bottom:15px;">Joueurs connectés :</p>';
-            var chips = gameData.players.map(function(p){ return '<div class="chip">'+p.name+'</div>'; }).join("");
-            html += '<div class="chips" style="justify-content:center;">'+chips+'</div>';
-            html += '<button class="btn btn-primary" onclick="startMultigame()">Lancer la partie</button>';
-            html += '</div>';
-        }
-    } else if(gameData.screen === "join_form") {
-        html += '<div class="panel">';
-        html += '<h2>Rejoindre une partie</h2>';
-        html += '<input type="text" id="pseudoJoin" placeholder="Ton pseudo" autocomplete="off">';
-        html += '<input type="text" id="roomCodeInput" placeholder="Code du salon (ex: A4F9)" autocomplete="off" style="text-transform:uppercase;">';
-        html += '<button class="btn btn-primary" onclick="connectToRoom()">Se connecter au salon</button>';
-        html += '<button class="btn btn-ghost" onclick="gameData.screen=\'setup\'; render();">Retour</button>';
-        html += '</div>';
-    } else if(gameData.screen === "waiting_room") {
-        html += '<div class="panel center">';
-        html += '<h2>Salon d\'attente</h2>';
-        html += '<p class="dim">Connecté au salon <strong>'+roomCode+'</strong>.</p>';
-        html += '<p class="dim" style="margin-top:15px;">En attente que l\'hôte lance la partie...</p>';
-        html += '</div>';
-    } else if(gameData.screen === "reveal") {
-        // Retrouver les informations du joueur actuel
-        var myPlayer = gameData.players.find(function(p) { return p.name === myName; });
-        var secretWord = myPlayer ? myPlayer.word : "Mot secret";
-
-        html += '<div class="panel center">';
-        html += '<h2>Ton dossier confidentiel</h2>';
-        html += '<p class="dim">Voici ton mot codé pour cette affaire :</p>';
-        html += '<div class="wordbig">'+secretWord+'</div>';
-        html += '<p class="dim" style="margin-top:20px;">Garde-le secret et prépare ton premier indice !</p>';
-        html += '</div>';
-    }
-
-    document.getElementById("app").innerHTML = html;
+function migrateLibrary(){
+  var currentVersion = "undercover_library_v5";
+  var stored = null;
+  try{ var raw = localStorage.getItem(currentVersion); if(raw) stored = JSON.parse(raw); }catch(e){}
+  if(stored && stored.length){ state.library = stored; return; }
+  var lib = BUILTIN_PAIRS.map(function(p,i){ return { id:"b"+i, theme:p.theme, difficulty:p.difficulty, civil:p.civil, undercover:p.undercover }; });
+  state.library = lib;
+  saveLibrary();
 }
 
+function saveLibrary(){ try{ localStorage.setItem("undercover_library_v5", JSON.stringify(state.library)); }catch(e){} }
+
+function loadStorage(){
+  migrateLibrary();
+  try{ var gh = localStorage.getItem("undercover_game_history"); if(gh) state.gameHistory = JSON.parse(gh); }catch(e){}
+  try{ var tm = localStorage.getItem("undercover_theme"); if(tm==="light"||tm==="dark") state.themeMode = tm; }catch(e){}
+  applyTheme();
+}
+function applyTheme(){ document.documentElement.setAttribute("data-theme", state.themeMode); }
+function toggleTheme(){
+  state.themeMode = state.themeMode==="dark" ? "light" : "dark";
+  try{ localStorage.setItem("undercover_theme", state.themeMode); }catch(e){}
+  applyTheme();
+  render();
+}
+function toggleFullscreen(){
+  var isFs = document.fullscreenElement || document.webkitFullscreenElement;
+  if(!isFs){
+    var el = document.documentElement;
+    var req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+    if(req){ try{ req.call(el); }catch(e){} }
+  } else {
+    var exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    if(exit){ try{ exit.call(document); }catch(e){} }
+  }
+}
+document.addEventListener("fullscreenchange", function(){ render(); });
+document.addEventListener("webkitfullscreenchange", function(){ render(); });
+
+function addPlayer(){
+  var input = document.getElementById("nameInput");
+  var name = input.value.trim();
+  if(!name) return;
+  state.playerNames.push(name);
+  if(state.gameMode === "network") broadcastState();
+  render();
+}
+function removePlayer(idx){ 
+  state.playerNames.splice(idx,1); 
+  if(state.gameMode === "network") broadcastState(); 
+  render(); 
+}
+
+function changeUndercover(delta){
+  state.numUndercover = Math.max(0, Math.min(3, state.numUndercover+delta)); 
+  if(state.gameMode === "network") broadcastState(); 
+  render();
+}
+function changeWhite(delta){
+  state.numWhite = Math.max(0, Math.min(2, state.numWhite+delta)); 
+  if(state.gameMode === "network") broadcastState(); 
+  render();
+}
+function setTheme(v){ state.theme=v; }
+function setDifficulty(v){ state.difficulty=v; }
+
+function toggleGameMaster(){ state.isGameMaster = !state.isGameMaster; render(); }
+function toggleBlindMode(){ state.blindMode = !state.blindMode; render(); }
+
+function allPairs(){ return state.library; }
+function themesList(){
+  var set = {}; allPairs().forEach(function(p){ set[p.theme]=true; });
+  return ["Aléatoire"].concat(Object.keys(set).sort());
+}
+
+function startGame(){
+  var pair = null;
+  if(state.isGameMaster){
+    var gmCiv = document.getElementById("gmCivil");
+    var gmUnd = document.getElementById("gmUndercover");
+    if(gmCiv) state.customCivil = gmCiv.value.trim();
+    if(gmUnd) state.customUndercover = gmUnd.value.trim();
+    if(!state.customCivil || !state.customUndercover){ alert("Veuillez renseigner les deux mots."); return; }
+    pair = { theme:"Personnalisé", difficulty:"Custom", civil:state.customCivil, undercover:state.customUndercover };
+  } else {
+    var themeSel = document.getElementById("themeSel");
+    var diffSel = document.getElementById("diffSel");
+    if(themeSel) state.theme = themeSel.value;
+    if(diffSel) state.difficulty = diffSel.value;
+
+    var pool = allPairs();
+    if(state.theme !== "Aléatoire") pool = pool.filter(function(p){return p.theme===state.theme;});
+    if(state.difficulty !== "Aléatoire") pool = pool.filter(function(p){return p.difficulty===state.difficulty;});
+    if(pool.length===0) pool = allPairs();
+    pair = pool[Math.floor(Math.random()*pool.length)];
+  }
+
+  var order = shuffle(state.playerNames.map(function(_,i){return i;}));
+  var players = state.playerNames.map(function(name,idx){
+    return { id:idx, name:name, role:"civil", word:pair.civil, alive:true };
+  });
+  order.slice(0,state.numUndercover).forEach(function(idx){ players[idx].role="undercover"; players[idx].word=pair.undercover; });
+  order.slice(state.numUndercover, state.numUndercover+state.numWhite).forEach(function(idx){ players[idx].role="white"; players[idx].word=null; });
+
+  state.players = players;
+  state.wordPair = pair;
+  state.revealIndex = 0;
+  state.revealed = false;
+  state.round = 1;
+  state.eliminations = [];
+  state.winner = null;
+  state.clueOrder = shuffle(players.map(function(p){return p.id;}));
+  state.clueTurn = 0;
+  state.screen = "reveal";
+  
+  if(state.gameMode === "network") broadcastState();
+  render();
+}
+
+function revealCard(){ state.revealed = true; render(); }
+function nextReveal(){
+  if(state.revealIndex+1 >= state.players.length){ state.screen="clues"; }
+  else { state.revealIndex++; state.revealed=false; }
+  render();
+}
+
+function aliveClueOrder(){
+  return state.clueOrder.filter(function(id){
+    var p = state.players.find(function(pl){return pl.id===id;});
+    return p && p.alive;
+  });
+}
+function nextClueTurn(){
+  var order = aliveClueOrder();
+  if(state.clueTurn+1 >= order.length){ state.screen="vote"; state.selectedVote=null; }
+  else { state.clueTurn++; }
+  render();
+}
+function goToVote(){ state.screen="vote"; state.selectedVote=null; render(); }
+function selectVote(id){ state.selectedVote = id; render(); }
+
+function confirmVote(){
+  if(state.selectedVote==null) return;
+  var target = state.players.find(function(p){return p.id===state.selectedVote;});
+  state.justEliminated = target;
+  target.alive = false;
+  state.eliminations.push({ round:state.round, playerId:target.id, name:target.name, role:target.role });
+  if(target.role==="white"){ state.screen="whiteGuess"; } else { state.screen="eliminationReveal"; }
+  render();
+}
+
+function submitWhiteGuess(){
+  var input = document.getElementById("whiteGuessInput");
+  var guess = (input ? input.value : "").trim();
+  var correct = guess.length>0 && guess.toLowerCase()===state.wordPair.civil.trim().toLowerCase();
+  var last = state.eliminations[state.eliminations.length-1];
+  last.whiteGuess = guess; last.whiteCorrect = correct;
+  if(correct){ finishGame("white"); } else { state.screen="eliminationReveal"; render(); }
+}
+
+function checkWinCondition(){
+  var alive = state.players.filter(function(p){return p.alive;});
+  var aliveInf = alive.filter(function(p){return p.role!=="civil";}).length;
+  var aliveCiv = alive.filter(function(p){return p.role==="civil";}).length;
+  if(aliveInf===0) return "civils";
+  if(aliveInf>=aliveCiv) return "infiltrators";
+  return null;
+}
+function proceedAfterElimination(){
+  var result = checkWinCondition();
+  if(result){ finishGame(result); return; }
+  state.round++;
+  var aliveIds = state.players.filter(function(p){return p.alive;}).map(function(p){return p.id;});
+  state.clueOrder = shuffle(aliveIds);
+  state.clueTurn = 0;
+  state.screen = "clues";
+  render();
+}
+
+function finishGame(winnerKey){
+  state.winner = winnerKey;
+  state.screen = "end";
+  state.gameHistory.unshift({
+    date:new Date().toISOString(), winner:winnerKey,
+    players: state.players.map(function(p){return {name:p.name, role:p.role};}),
+    rounds: state.round, wordPair: state.wordPair, eliminations: state.eliminations
+  });
+  render();
+}
+
+function newGameSamePlayers(){ state.screen="setup"; render(); }
+
+function openLibrary() {
+  var pwd = prompt("🔒 ACCÈS RESTREINT\nVeuillez saisir le code d'accès à 4 chiffres :");
+  if(pwd === "2800") { state.showLibrary = true; render(); }
+  else if (pwd !== null && pwd !== "") { alert("❌ Code incorrect."); }
+}
+function closeLibrary(){ state.showLibrary=false; render(); }
+function openStats(){ state.showStats=true; render(); }
+function closeStats(){ state.showStats=false; render(); }
+
+function addLibraryPair(){
+  var civil = document.getElementById("wmCivil").value.trim();
+  var undercover = document.getElementById("wmUndercover").value.trim();
+  var theme = document.getElementById("wmTheme").value.trim();
+  var diff = document.getElementById("wmDiff").value;
+  if(!civil || !undercover || !theme) return;
+  state.library.push({ id:"c"+Date.now(), theme:theme, difficulty:diff, civil:civil, undercover:undercover });
+  saveLibrary(); render();
+}
+function deleteLibraryPair(id){ state.library = state.library.filter(function(p){ return p.id!==id; }); saveLibrary(); render(); }
+
+function shuffle(arr){
+  var a = arr.slice();
+  for(var i=a.length-1;i>0;i--){
+    var j = Math.floor(Math.random()*(i+1));
+    var t=a[i]; a[i]=a[j]; a[j]=t;
+  }
+  return a;
+}
+function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+function render(){
+  var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  var html = "";
+  html += '<header><div><h1>UNDERCOVER</h1><div class="subtitle">Salle d\'Arcade &middot; Enquête</div></div>';
+  html += '<div class="headerbtns">';
+  if(state.screen==="setup" && !state.showLibrary && !state.showStats){
+    html += '<button class="iconbtn" onclick="openLibrary()">📁</button>';
+    html += '<button class="iconbtn" onclick="openStats()">📊</button>';
+  }
+  html += '<button class="themebtn" onclick="toggleTheme()">'+(state.themeMode==="dark" ? "☀️" : "🌙")+'</button>';
+  html += '<button class="themebtn" onclick="toggleFullscreen()">'+(isFs ? "✕" : "⛶")+'</button>';
+  html += '</div></header>';
+
+  if(state.showLibrary){ html += renderLibrary(); }
+  else if(state.showStats){ html += renderStats(); }
+  else if(state.screen === "mode_select"){
+    html += '<div class="panel center">';
+    html += '<h2>Choix du mode</h2>';
+    html += '<p class="dim" style="margin-bottom:15px;">Comment souhaitez-vous jouer ?</p>';
+    html += '<button class="btn btn-primary" onclick="selectMode(\'local\')">📱 Un seul téléphone</button>';
+    html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="selectMode(\'network\')">🌐 Chacun son téléphone</button>';
+    html += '</div>';
+  }
+  else if(state.screen === "net_home"){
+    html += '<button class="linkbtn" onclick="state.screen=\'mode_select\'; render();">&#8249; Retour au choix</button>';
+    html += '<div class="panel center"><h2>Mode Réseau</h2>';
+    html += '<button class="btn btn-primary" onclick="startHosting()">Créer un salon</button>';
+    html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="joinRoomForm()">Rejoindre un salon</button></div>';
+  }
+  else if(state.screen === "join_form"){
+    html += '<div class="panel"><h2>Rejoindre une enquête</h2>';
+    html += '<input type="text" id="pseudoJoin" placeholder="Ton pseudo">';
+    html += '<input type="text" id="roomCodeInput" placeholder="Code du salon (4 lettres)" style="text-transform:uppercase;">';
+    html += '<button class="btn btn-primary" onclick="connectToRoom()">Se connecter</button>';
+    html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="state.screen=\'net_home\'; render();">Retour</button></div>';
+  }
+  else if(state.screen === "waiting_room"){
+    html += '<div class="panel center"><h2>Salon d\'attente</h2>';
+    html += '<p class="dim">Salon : <strong>'+roomCode+'</strong></p>';
+    html += '<p class="dim" style="margin-top:15px;">En attente de l\'hôte...</p></div>';
+  }
+  else if(state.screen === "setup"){
+    if(state.gameMode === "network") {
+      html += '<div class="panel center"><h2>Code du salon</h2><div class="codebox">'+roomCode+'</div><p class="dim">Partage ce code à tes amis.</p></div>';
+    } else {
+      html += '<button class="linkbtn" onclick="state.screen=\'mode_select\'; render();">&#8249; Changer de mode</button>';
+    }
+    html += renderSetupBody();
+  }
+  else if(state.screen === "reveal"){ html += renderReveal(); }
+  else if(state.screen === "clues"){ html += renderClues(); }
+  else if(state.screen === "vote"){ html += renderVote(); }
+  else if(state.screen === "whiteGuess"){ html += renderWhiteGuess(); }
+  else if(state.screen === "eliminationReveal"){ html += renderEliminationReveal(); }
+  else if(state.screen === "end"){ html += renderEnd(); }
+
+  document.getElementById("app").innerHTML = html;
+  var ni = document.getElementById("nameInput");
+  if(ni){ ni.addEventListener("keydown", function(e){ if(e.key==="Enter") addPlayer(); }); ni.focus({preventScroll:true}); }
+  var wg = document.getElementById("whiteGuessInput");
+  if(wg){ wg.addEventListener("keydown", function(e){ if(e.key==="Enter") submitWhiteGuess(); }); wg.focus({preventScroll:true}); }
+}
+
+function renderSetupBody(){
+  var n = state.playerNames.length;
+  var numCivils = n - state.numUndercover - state.numWhite;
+  var tooMany = (state.numUndercover+state.numWhite) >= numCivils || numCivils<1;
+  var canStart = n>=3 && !tooMany;
+
+  var chips = state.playerNames.map(function(name,idx){
+    return '<div class="chip"><span>'+esc(name)+'</span><button onclick="removePlayer('+idx+')">&#10005;</button></div>';
+  }).join("");
+
+  var themes = themesList();
+  var themeOpts = themes.map(function(t){ return '<option value="'+esc(t)+'"'+(t===state.theme?" selected":"")+'>'+esc(t)+'</option>'; }).join("");
+  var diffs = ["Aléatoire","facile","moyen","difficile"];
+  var diffOpts = diffs.map(function(d){ return '<option value="'+d+'"'+(d===state.difficulty?" selected":"")+'>'+d+'</option>'; }).join("");
+
+  var html = "";
+  html += '<div class="panel"><h2>Suspects ('+n+')</h2><div class="chips">'+chips+'</div>';
+  html += '<div class="inline2"><input type="text" id="nameInput" placeholder="Nom du suspect"><button class="btn btn-ghost btn-small" onclick="addPlayer()">+</button></div></div>';
+
+  html += '<div class="panel"><h2>Infiltrés</h2>';
+  html += '<div class="row"><span class="dim">Undercover</span><div class="stepper"><button onclick="changeUndercover(-1)">&minus;</button><span class="val mono">'+state.numUndercover+'</span><button onclick="changeUndercover(1)">+</button></div></div>';
+  html += '<div class="row"><span class="dim">Mr. White</span><div class="stepper"><button onclick="changeWhite(-1)">&minus;</button><span class="val mono">'+state.numWhite+'</span><button onclick="changeWhite(1)">+</button></div></div>';
+  html += '<div class="dim" style="font-size:1rem;margin-top:8px;">'+numCivils+' civil(s) &middot; '+state.numUndercover+' undercover &middot; '+state.numWhite+' mr. white</div>';
+  if(tooMany) html += '<div class="warn">Trop d\'infiltrés ! Les civils doivent rester majoritaires.</div>';
+  html += '</div>';
+
+  html += '<div class="panel"><h2>Règles & Mots</h2>';
+  html += '<label style="cursor:pointer;display:flex;align-items:center;gap:8px;" class="dim"><input type="checkbox" '+(state.isGameMaster?"checked":"")+' onchange="toggleGameMaster()"> Mode Meneur d\'enquête</label>';
+  html += '<label style="cursor:pointer;display:flex;align-items:center;gap:8px;margin-top:10px;margin-bottom:10px;" class="dim"><input type="checkbox" '+(state.blindMode?"checked":"")+' onchange="toggleBlindMode()"> Mode Identité Secrète</label>';
+
+  if(state.isGameMaster){
+    html += '<div class="grid2"><div><span class="dim">Mot Civils</span><input type="text" id="gmCivil" value="'+esc(state.customCivil)+'" placeholder="ex: Soleil" oninput="state.customCivil=this.value"></div><div><span class="dim">Mot Undercovers</span><input type="text" id="gmUndercover" value="'+esc(state.customUndercover)+'" placeholder="ex: Lune" oninput="state.customUndercover=this.value"></div></div>';
+  } else {
+    html += '<div class="grid2"><div><span class="dim">Dossier</span><select id="themeSel" onchange="setTheme(this.value)">'+themeOpts+'</select></div><div><span class="dim">Niveau</span><select id="diffSel" onchange="setDifficulty(this.value)">'+diffOpts+'</select></div></div>';
+  }
+  html += '</div>';
+
+  html += '<button class="btn btn-primary" '+(canStart?"":"disabled")+' onclick="startGame()">Ouvrir l\'enquête</button>';
+  return html;
+}
+
+function renderReveal(){
+  if(state.gameMode === "network") {
+    var myRole = isHost ? state.players[0] : state.players.find(function(p){ return p.name === myName; });
+    var clsNet = myRole && myRole.role==="civil" ? "stamp olive" : "stamp";
+    var html = '<div class="panel center" style="padding:40px 18px;">';
+    html += '<div class="'+clsNet+'">'+(myRole ? ROLE_LABEL[myRole.role] : "Infiltré")+'</div>';
+    html += '<p class="dim" style="margin-top:20px;">Ton mot codé secret :</p>';
+    html += '<div class="wordbig">'+(myRole ? (myRole.word || "Aucun (Mr. White)") : "Mot secret")+'</div>';
+    html += '</div>';
+    return html;
+  }
+
+  var p = state.players[state.revealIndex];
+  var html = '<p class="center dim" style="font-size:1.1rem;">DÉPOSITION '+(state.revealIndex+1)+' / '+state.players.length+'</p>';
+  html += '<div class="panel center" style="padding:30px 18px;">';
+  if(!state.revealed){
+    html += '<p class="dim">Passez l\'appareil à</p><p class="wordbig" style="margin:10px 0;">'+esc(p.name)+'</p>';
+    html += '<button class="btn btn-primary" style="margin-top:15px;" onclick="revealCard()">Ouvrir mon dossier</button>';
+  } else {
+    var cls = p.role==="civil" ? "stamp olive" : "stamp";
+    html += '<div class="'+cls+'">'+ROLE_LABEL[p.role]+'</div>';
+    html += '<p class="dim" style="margin-top:15px;">Mot secret :</p><p class="wordbig">'+(p.word||"Aucun")+'</p>';
+    html += '<button class="btn btn-ghost" style="margin-top:20px;" onclick="nextReveal()">Joueur suivant &#8250;</button>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderClues(){
+  var order = aliveClueOrder();
+  var currentId = order[state.clueTurn];
+  var current = state.players.find(function(p){return p.id===currentId;});
+  var html = '<div class="panel center"><h2>Manche '+state.round+'</h2>';
+  html += '<p class="dim">Indice de</p><p class="wordbig">'+esc(current.name)+'</p>';
+  html += '<button class="btn btn-primary" style="margin-top:20px;" onclick="nextClueTurn()">Suivant &#8250;</button></div>';
+  return html;
+}
+
+function renderVote(){
+  var alive = state.players.filter(function(p){return p.alive;});
+  var html = '<div class="panel center"><h2>Interrogatoire</h2><p class="dim">Désignez le suspect à éliminer :</p>';
+  alive.forEach(function(p){
+    var sel = state.selectedVote===p.id;
+    html += '<button class="btn '+(sel?'btn-primary':'btn-ghost')+'" style="margin-top:8px;" onclick="selectVote('+p.id+')">'+esc(p.name)+'</button>';
+  });
+  html += '<button class="btn btn-primary" style="margin-top:15px;" '+(state.selectedVote==null?"disabled":"")+' onclick="confirmVote()">Confirmer l\'inculpation</button></div>';
+  return html;
+}
+
+function renderWhiteGuess(){
+  var html = '<div class="panel center"><h2>Mr. White démasqué</h2><p class="dim">Devinez le mot des civils :</p>';
+  html += '<input type="text" id="whiteGuessInput" placeholder="Votre déposition">';
+  html += '<button class="btn btn-primary" onclick="submitWhiteGuess()">Valider</button></div>';
+  return html;
+}
+
+function renderEliminationReveal(){
+  var p = state.justEliminated;
+  var html = '<div class="panel center"><h2>Résultat de l\'inculpation</h2>';
+  html += '<p class="dim">'+esc(p.name)+' était</p><div class="stamp" style="margin:15px 0;">'+ROLE_LABEL[p.role]+'</div>';
+  html += '<button class="btn btn-primary" onclick="proceedAfterElimination()">Poursuivre</button></div>';
+  return html;
+}
+
+function renderEnd(){
+  var label = state.winner==="civils" ? "Les Civils gagnent !" : "Les Infiltrés gagnent !";
+  var html = '<div class="panel center"><h2>Fin de l\'affaire</h2><div class="stamp olive" style="margin:20px 0;">'+label+'</div>';
+  html += '<button class="btn btn-primary" onclick="newGameSamePlayers()">Nouvelle affaire</button></div>';
+  return html;
+}
+
+function renderLibrary(){
+  var html = '<button class="linkbtn" onclick="closeLibrary()">&#8249; Retour</button>';
+  html += '<div class="panel"><h2>Archives ('+state.library.length+' mots)</h2></div>';
+  return html;
+}
+
+function renderStats(){
+  var html = '<button class="linkbtn" onclick="closeStats()">&#8249; Retour</button>';
+  html += '<div class="panel"><h2>Statistiques</h2><p class="dim">Affaires jouées : '+state.gameHistory.length+'</p></div>';
+  return html;
+}
+
+loadStorage();
 render();
 </script>
 </body>
