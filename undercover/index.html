@@ -75,7 +75,7 @@
   .subtitle { font-size: 1rem; color: var(--text-sub); margin-top: 4px; }
   .headerbtns { display: flex; gap: 8px; flex-wrap: wrap; }
   
-  .themebtn, .iconbtn {
+  .themebtn {
     font-family: var(--font-display); font-size: 0.5rem;
     background: rgba(255, 46, 136, 0.08); border: 2px solid var(--accent);
     color: var(--accent); padding: 8px 10px; cursor: pointer;
@@ -178,8 +178,7 @@ var state = {
   theme:"Aléatoire", difficulty:"Aléatoire",
   isGameMaster:false, customCivil:"", customUndercover:"",
   blindMode:false,
-  library:[], gameHistory:[],
-  showLibrary:false, showStats:false,
+  library:[],
   players:[], wordPair:null,
   revealIndex:0, revealed:false,
   themeMode:"dark"
@@ -198,32 +197,36 @@ function generateRoomCode() {
     return code;
 }
 
-function initPeer(onOpenCallback) {
-    if(peer) return;
-    peer = new Peer();
-    peer.on('open', function(id) { if(onOpenCallback) onOpenCallback(id); });
-}
-
+// --- CONNEXION RÉSEAU CORRIGÉE ET STABLE ---
 function startHosting() {
     isHost = true;
     roomCode = generateRoomCode();
-    initPeer(function(id) {
-        if(peer) peer.destroy();
-        peer = new Peer(roomCode);
-        peer.on('open', function() {
-            state.screen = "setup";
-            render();
-        });
-        peer.on('connection', function(c) {
-            connections.push(c);
-            c.on('data', function(data) {
-                if(data.type === "JOIN") {
+    
+    if(peer) peer.destroy();
+    peer = new Peer(roomCode); // L'hôte prend le code du salon comme identifiant unique
+
+    peer.on('open', function(id) {
+        state.screen = "setup";
+        render();
+    });
+
+    peer.on('connection', function(c) {
+        connections.push(c);
+        c.on('data', function(data) {
+            if(data.type === "JOIN") {
+                // Évite les doublons de pseudos si un joueur se reconnecte
+                var exists = state.playerNames.includes(data.name);
+                if(!exists) {
                     state.playerNames.push(data.name);
-                    broadcastState();
-                    render();
                 }
-            });
+                broadcastState();
+                render();
+            }
         });
+    });
+
+    peer.on('error', function(err) {
+        alert("Erreur réseau hôte : " + err.type);
     });
 }
 
@@ -247,37 +250,33 @@ function connectToRoom() {
     myName = nameInput.value.trim();
     roomCode = codeInput.value.trim().toUpperCase();
 
-    initPeer(function(id) {
+    if(peer) peer.destroy();
+    peer = new Peer(); // L'invité crée un peer aléatoire pour se connecter à l'hôte
+
+    peer.on('open', function(id) {
         conn = peer.connect(roomCode);
+
         conn.on('open', function() {
             conn.send({ type: "JOIN", name: myName });
             state.screen = "waiting_room";
             render();
         });
+
         conn.on('data', function(data) {
             if(data.type === "STATE_UPDATE") {
                 state = data.data;
                 render();
             }
         });
+
+        conn.on('error', function(err) {
+            alert("Impossible de joindre le salon. Vérifie le code.");
+        });
     });
 }
 
-function migrateLibrary(){
-  var currentVersion = "undercover_library_v5";
-  var stored = null;
-  try{ var raw = localStorage.getItem(currentVersion); if(raw) stored = JSON.parse(raw); }catch(e){}
-  if(stored && stored.length){ state.library = stored; return; }
-  var lib = BUILTIN_PAIRS.map(function(p,i){ return { id:"b"+i, theme:p.theme, difficulty:p.difficulty, civil:p.civil, undercover:p.undercover }; });
-  state.library = lib;
-  saveLibrary();
-}
-
-function saveLibrary(){ try{ localStorage.setItem("undercover_library_v5", JSON.stringify(state.library)); }catch(e){} }
-
 function loadStorage(){
-  migrateLibrary();
-  try{ var gh = localStorage.getItem("undercover_game_history"); if(gh) state.gameHistory = JSON.parse(gh); }catch(e){}
+  state.library = BUILTIN_PAIRS.map(function(p,i){ return { id:"b"+i, theme:p.theme, difficulty:p.difficulty, civil:p.civil, undercover:p.undercover }; });
   try{ var tm = localStorage.getItem("undercover_theme"); if(tm==="light"||tm==="dark") state.themeMode = tm; }catch(e){}
   applyTheme();
 }
@@ -292,15 +291,12 @@ function toggleFullscreen(){
   var isFs = document.fullscreenElement || document.webkitFullscreenElement;
   if(!isFs){
     var el = document.documentElement;
-    var req = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
-    if(req){ try{ req.call(el); }catch(e){} }
+    if(el.requestFullscreen) el.requestFullscreen();
   } else {
-    var exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
-    if(exit){ try{ exit.call(document); }catch(e){} }
+    if(document.exitFullscreen) document.exitFullscreen();
   }
 }
 document.addEventListener("fullscreenchange", function(){ render(); });
-document.addEventListener("webkitfullscreenchange", function(){ render(); });
 
 function addPlayer(){
   if(state.gameMode === "network" && !isHost) return;
@@ -461,6 +457,8 @@ function render(){
   document.getElementById("app").innerHTML = html;
   var ni = document.getElementById("nameInput");
   if(ni){ ni.addEventListener("keydown", function(e){ if(e.key==="Enter") addPlayer(); }); ni.focus({preventScroll:true}); }
+  var pj = document.getElementById("pseudoJoin");
+  if(pj){ pj.addEventListener("keydown", function(e){ if(e.key==="Enter") connectToRoom(); }); pj.focus({preventScroll:true}); }
 }
 
 function renderSetupBody(){
@@ -515,7 +513,8 @@ function renderSetupBody(){
 
 function renderReveal(){
   if(state.gameMode === "network") {
-    var myRole = isHost ? state.players[0] : state.players.find(function(p){ return p.name === myName; });
+    // Retrouver le rôle du joueur connecté en comparant son pseudo
+    var myRole = state.players.find(function(p){ return p.name === myName; }) || state.players[0];
     var html = '<div class="panel center" style="padding:40px 18px;">';
     
     if(state.blindMode) {
