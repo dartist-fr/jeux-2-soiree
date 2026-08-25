@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0b0616">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Undercover • jeux2soiree</title>
+<title>Undercover — Salle d'Arcade Edition</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -592,6 +592,19 @@ function themesList(){
   return ["Aléatoire"].concat(Object.keys(set).sort());
 }
 
+/* En Mode Meneur d'enquête + réseau, l'hôte connaît déjà les deux mots :
+   il ne doit jamais recevoir de rôle et ne compte pas comme joueur. */
+function playingNames(){
+  var names = Array.from(new Set(state.playerNames));
+  if(state.isGameMaster && state.gameMode === "network"){
+    names = names.filter(function(n){ return n.toLowerCase() !== myName.toLowerCase(); });
+  }
+  return names;
+}
+function isExcludedGameMaster(){
+  return state.isGameMaster && state.gameMode === "network" && isHost;
+}
+
 function startGame(){
   if(state.gameMode === "network" && !isHost) return;
 
@@ -611,7 +624,7 @@ function startGame(){
     pair = pool[Math.floor(Math.random()*pool.length)];
   }
 
-  var uniqueNames = Array.from(new Set(state.playerNames));
+  var uniqueNames = playingNames();
 
   var order = shuffle(uniqueNames.map(function(_,i){return i;}));
   var players = uniqueNames.map(function(name,idx){
@@ -841,7 +854,9 @@ function render(){
 }
 
 function renderSetupBody(){
-  var n = state.playerNames.length;
+  var totalConnected = state.playerNames.length;
+  var playing = playingNames();
+  var n = playing.length;
   var numCivils = n - state.numUndercover - state.numWhite;
   var tooMany = (state.numUndercover+state.numWhite) >= numCivils || numCivils<1;
   var canStart = n>=3 && !tooMany;
@@ -849,8 +864,10 @@ function renderSetupBody(){
   var disableControls = (state.gameMode === "network" && !isHost);
 
   var chips = state.playerNames.map(function(name,idx){
-    var showDelete = (state.gameMode === "local" && n > 1);
-    return '<div class="chip"><span>'+esc(name)+'</span>'+(showDelete ? '<button onclick="removePlayer('+idx+')">&#10005;</button>' : '')+'</div>';
+    var showDelete = (state.gameMode === "local" && totalConnected > 1);
+    var isMeneur = state.isGameMaster && state.gameMode === "network" && name.toLowerCase() === myName.toLowerCase();
+    var label = esc(name) + (isMeneur ? ' <span class="dim" style="font-size:0.95rem;">&middot; Meneur, ne joue pas</span>' : '');
+    return '<div class="chip"><span>'+label+'</span>'+(showDelete ? '<button onclick="removePlayer('+idx+')">&#10005;</button>' : '')+'</div>';
   }).join("");
 
   var themes = themesList();
@@ -859,7 +876,7 @@ function renderSetupBody(){
   var diffOpts = diffs.map(function(d){ return '<option value="'+d+'"'+(d===state.difficulty?" selected":"")+'>'+d+'</option>'; }).join("");
 
   var html = "";
-  html += '<div class="panel"><h2>Suspects connectés ('+n+')</h2><div class="chips">'+chips+'</div>';
+  html += '<div class="panel"><h2>Suspects connectés ('+totalConnected+')</h2><div class="chips">'+chips+'</div>';
   if(!disableControls && state.gameMode === "local") {
     html += '<div class="inline2"><input type="text" id="nameInput" placeholder="Nom du suspect"><button class="btn btn-ghost btn-small" onclick="addPlayer()">+</button></div>';
   }
@@ -874,6 +891,9 @@ function renderSetupBody(){
 
   html += '<div class="panel"><h2>Règles & Mots</h2>';
   html += '<label style="cursor:pointer;display:flex;align-items:center;gap:8px;" class="dim"><input type="checkbox" '+(state.isGameMaster?"checked":"")+' '+(disableControls?'disabled':'')+' onchange="toggleGameMaster()"> Mode Meneur d\'enquête</label>';
+  if(state.isGameMaster){
+    html += '<p class="dim" style="font-size:0.95rem;margin-top:4px;">'+(state.gameMode === "network" ? "L\'hôte connaît les deux mots : il anime la partie mais ne reçoit pas de rôle." : "La personne qui choisit les mots ne doit pas s\'ajouter comme joueur.")+'</p>';
+  }
   html += '<label style="cursor:pointer;display:flex;align-items:center;gap:8px;margin-top:10px;margin-bottom:10px;" class="dim"><input type="checkbox" '+(state.blindMode?"checked":"")+' '+(disableControls?'disabled':'')+' onchange="toggleBlindMode()"> Mode Identité Secrète</label>';
 
   if(state.isGameMaster){
@@ -897,18 +917,23 @@ function renderSetupBody(){
 
 function renderReveal(){
   if(state.gameMode === "network") {
-    var myRole = state.players.find(function(p){ return p.name.toLowerCase() === myName.toLowerCase(); }) || state.players[0];
     var html = '<div class="panel center" style="padding:40px 18px;">';
-    
-    if(state.blindMode) {
-        html += '<div class="stamp neutral">IDENTITÉ SECRÈTE</div>';
-        html += '<p class="dim" style="margin-top:20px;">Ton mot codé secret :</p>';
-        html += '<div class="wordbig">'+(myRole ? (myRole.word || "Aucun (Mr. White)") : "Mot secret")+'</div>';
+
+    if(isExcludedGameMaster()){
+      html += '<div class="stamp neutral">MENEUR D\'ENQUÊTE</div>';
+      html += '<p class="dim" style="margin-top:20px;">Tu as choisi les deux mots, tu connais donc déjà tout : tu ne joues pas cette manche, tu animes.</p>';
     } else {
-        var clsNet = myRole && myRole.role==="civil" ? "stamp olive" : "stamp";
-        html += '<div class="'+clsNet+'">'+(myRole ? ROLE_LABEL[myRole.role] : "Infiltré")+'</div>';
-        html += '<p class="dim" style="margin-top:20px;">Ton mot codé secret :</p>';
-        html += '<div class="wordbig">'+(myRole ? (myRole.word || "Aucun (Mr. White)") : "Mot secret")+'</div>';
+      var myRole = state.players.find(function(p){ return p.name.toLowerCase() === myName.toLowerCase(); });
+      if(state.blindMode) {
+          html += '<div class="stamp neutral">IDENTITÉ SECRÈTE</div>';
+          html += '<p class="dim" style="margin-top:20px;">Ton mot codé secret :</p>';
+          html += '<div class="wordbig">'+(myRole ? (myRole.word || "Aucun (Mr. White)") : "Mot secret")+'</div>';
+      } else {
+          var clsNet = myRole && myRole.role==="civil" ? "stamp olive" : "stamp";
+          html += '<div class="'+clsNet+'">'+(myRole ? ROLE_LABEL[myRole.role] : "Infiltré")+'</div>';
+          html += '<p class="dim" style="margin-top:20px;">Ton mot codé secret :</p>';
+          html += '<div class="wordbig">'+(myRole ? (myRole.word || "Aucun (Mr. White)") : "Mot secret")+'</div>';
+      }
     }
     html += '</div>';
 
