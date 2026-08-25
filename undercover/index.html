@@ -138,6 +138,7 @@
   }
   .stamp.olive { border-color: var(--neon-cyan); color: var(--neon-cyan); text-shadow: 0 0 6px rgba(34,230,255,0.6); }
   .stamp.neutral { border-color: var(--text-sub); color: var(--text-sub); }
+  .stamp.small { font-size: 0.55rem; padding: 6px 12px; }
 
   .wordbig { font-family: var(--font-display); font-size: 1.6rem; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,225,77,0.7); margin-top: 10px; }
   .center { text-align: center; }
@@ -734,13 +735,22 @@ function proceedAfterElimination(){
   render();
 }
 
+/* --- Contrôles réservés au maître de jeu (hôte réseau) en fin de partie --- */
+function isGameHost(){
+  // En local (1 téléphone), tout le monde partage le même appareil : pas de restriction.
+  // En réseau, seul celui qui a créé le salon (isHost === true) peut relancer/rentrer au salon.
+  return state.gameMode !== "network" || isHost === true;
+}
+
 function newGameSamePlayers(){ 
+  if(!isGameHost()) return;
   state.screen = "setup"; 
   if(state.gameMode === "network") broadcastState();
   render(); 
 }
 
 function returnToLobby() {
+    if(!isGameHost()) return;
     state.screen = "setup";
     if(state.gameMode === "network") broadcastState();
     render();
@@ -954,15 +964,15 @@ function renderEliminationReveal(){
 function renderEnd(){
   var label = state.winner==="civils" ? "Les Civils gagnent !" : (state.winner==="white" ? "Mr. White gagne !" : "Les Infiltrés gagnent !");
   var html = '<div class="panel center"><h2>Fin de l\'affaire</h2><div class="stamp olive" style="margin:20px 0;">'+label+'</div>';
-  
-  // Sécurité pour l'affichage de fin de partie en réseau pour l'hôte vs invités
-  if(state.gameMode === "network" && !isHost) {
-      html += '<p class="dim" style="margin-top:15px;">En attente que l\'hôte relance une partie...</p>';
-  } else {
+
+  if(isGameHost()) {
+      if(state.gameMode === "network") html += '<div class="stamp small" style="margin-bottom:16px;">MAÎTRE DE JEU</div>';
       html += '<button class="btn btn-primary" onclick="newGameSamePlayers()">Recommencer une partie</button>';
       html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="returnToLobby()">Retour au salon (Garder le groupe)</button>';
+  } else {
+      html += '<p class="dim" style="margin-top:15px;">En attente que l\'hôte relance une partie...</p>';
   }
-  
+
   html += '</div>';
   return html;
 }
