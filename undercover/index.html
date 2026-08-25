@@ -181,6 +181,9 @@ var state = {
   library:[],
   players:[], wordPair:null,
   revealIndex:0, revealed:false,
+  round:1, clueOrder:[], clueTurn:0,
+  eliminations:[], selectedVote:null, justEliminated:null,
+  winner:null,
   themeMode:"dark"
 };
 
@@ -197,13 +200,12 @@ function generateRoomCode() {
     return code;
 }
 
-// --- CONNEXION RÉSEAU CORRIGÉE ET STABLE ---
 function startHosting() {
     isHost = true;
     roomCode = generateRoomCode();
     
     if(peer) peer.destroy();
-    peer = new Peer(roomCode); // L'hôte prend le code du salon comme identifiant unique
+    peer = new Peer(roomCode);
 
     peer.on('open', function(id) {
         state.screen = "setup";
@@ -214,19 +216,13 @@ function startHosting() {
         connections.push(c);
         c.on('data', function(data) {
             if(data.type === "JOIN") {
-                // Évite les doublons de pseudos si un joueur se reconnecte
-                var exists = state.playerNames.includes(data.name);
-                if(!exists) {
+                if(!state.playerNames.includes(data.name)) {
                     state.playerNames.push(data.name);
                 }
                 broadcastState();
                 render();
             }
         });
-    });
-
-    peer.on('error', function(err) {
-        alert("Erreur réseau hôte : " + err.type);
     });
 }
 
@@ -251,7 +247,7 @@ function connectToRoom() {
     roomCode = codeInput.value.trim().toUpperCase();
 
     if(peer) peer.destroy();
-    peer = new Peer(); // L'invité crée un peer aléatoire pour se connecter à l'hôte
+    peer = new Peer();
 
     peer.on('open', function(id) {
         conn = peer.connect(roomCode);
@@ -267,10 +263,6 @@ function connectToRoom() {
                 state = data.data;
                 render();
             }
-        });
-
-        conn.on('error', function(err) {
-            alert("Impossible de joindre le salon. Vérifie le code.");
         });
     });
 }
@@ -365,11 +357,20 @@ function startGame(){
   if(state.gameMode === "network" && !isHost) return;
 
   var pair = null;
-  var pool = allPairs();
-  if(state.theme !== "Aléatoire") pool = pool.filter(function(p){return p.theme===state.theme;});
-  if(state.difficulty !== "Aléatoire") pool = pool.filter(function(p){return p.difficulty===state.difficulty;});
-  if(pool.length===0) pool = allPairs();
-  pair = pool[Math.floor(Math.random()*pool.length)];
+  if(state.isGameMaster){
+    var gmCiv = document.getElementById("gmCivil");
+    var gmUnd = document.getElementById("gmUndercover");
+    if(gmCiv) state.customCivil = gmCiv.value.trim();
+    if(gmUnd) state.customUndercover = gmUnd.value.trim();
+    if(!state.customCivil || !state.customUndercover){ alert("Veuillez renseigner les deux mots."); return; }
+    pair = { theme:"Personnalisé", difficulty:"Custom", civil:state.customCivil, undercover:state.customUndercover };
+  } else {
+    var pool = allPairs();
+    if(state.theme !== "Aléatoire") pool = pool.filter(function(p){return p.theme===state.theme;});
+    if(state.difficulty !== "Aléatoire") pool = pool.filter(function(p){return p.difficulty===state.difficulty;});
+    if(pool.length===0) pool = allPairs();
+    pair = pool[Math.floor(Math.random()*pool.length)];
+  }
 
   var order = shuffle(state.playerNames.map(function(_,i){return i;}));
   var players = state.playerNames.map(function(name,idx){
@@ -382,6 +383,11 @@ function startGame(){
   state.wordPair = pair;
   state.revealIndex = 0;
   state.revealed = false;
+  state.round = 1;
+  state.eliminations = [];
+  state.winner = null;
+  state.clueOrder = shuffle(players.map(function(p){return p.id;}));
+  state.clueTurn = 0;
   state.screen = "reveal";
   
   if(state.gameMode === "network") broadcastState();
@@ -389,10 +395,108 @@ function startGame(){
 }
 
 function revealCard(){ state.revealed = true; render(); }
+
+// CORRECTION DE LA TRANSITION VERS LES INDICES
 function nextReveal(){
-  if(state.revealIndex+1 >= state.players.length){ alert("Début des indices !"); }
-  else { state.revealIndex++; state.revealed=false; }
+  if(state.revealIndex + 1 >= state.players.length){ 
+    state.screen = "clues"; 
+  } else { 
+    state.revealIndex++; 
+    state.revealed = false; 
+  }
+  if(state.gameMode === "network") broadcastState();
   render();
+}
+
+function aliveClueOrder(){
+  return state.clueOrder.filter(function(id){
+    var p = state.players.find(function(pl){return pl.id===id;});
+    return p && p.alive;
+  });
+}
+
+function nextClueTurn(){
+  var order = aliveClueOrder();
+  if(state.clueTurn + 1 >= order.length){ 
+    state.screen = "vote"; 
+    state.selectedVote = null; 
+  } else { 
+    state.clueTurn++; 
+  }
+  if(state.gameMode === "network") broadcastState();
+  render();
+}
+
+function selectVote(id){ 
+  state.selectedVote = id; 
+  render(); 
+}
+
+function confirmVote(){
+  if(state.selectedVote == null) return;
+  var target = state.players.find(function(p){return p.id === state.selectedVote;});
+  state.justEliminated = target;
+  target.alive = false;
+  state.eliminations.push({ round: state.round, playerId: target.id, name: target.name, role: target.role });
+  
+  if(target.role === "white"){ 
+    state.screen = "whiteGuess"; 
+  } else { 
+    state.screen = "eliminationReveal"; 
+  }
+  if(state.gameMode === "network") broadcastState();
+  render();
+}
+
+function submitWhiteGuess(){
+  var input = document.getElementById("whiteGuessInput");
+  var guess = (input ? input.value : "").trim();
+  var correct = guess.length > 0 && guess.toLowerCase() === state.wordPair.civil.trim().toLowerCase();
+  var last = state.eliminations[state.eliminations.length - 1];
+  last.whiteGuess = guess; 
+  last.whiteCorrect = correct;
+  
+  if(correct){ 
+    state.winner = "white";
+    state.screen = "end"; 
+  } else { 
+    state.screen = "eliminationReveal"; 
+  }
+  if(state.gameMode === "network") broadcastState();
+  render();
+}
+
+function checkWinCondition(){
+  var alive = state.players.filter(function(p){return p.alive;});
+  var aliveInf = alive.filter(function(p){return p.role !== "civil";}).length;
+  var aliveCiv = alive.filter(function(p){return p.role === "civil";}).length;
+  if(aliveInf === 0) return "civils";
+  if(aliveInf >= aliveCiv) return "infiltrators";
+  return null;
+}
+
+function proceedAfterElimination(){
+  var result = checkWinCondition();
+  if(result){ 
+    state.winner = result;
+    state.screen = "end"; 
+    if(state.gameMode === "network") broadcastState();
+    render(); 
+    return; 
+  }
+  state.round++;
+  var aliveIds = state.players.filter(function(p){return p.alive;}).map(function(p){return p.id;});
+  state.clueOrder = shuffle(aliveIds);
+  state.clueTurn = 0;
+  state.screen = "clues";
+  if(state.gameMode === "network") broadcastState();
+  render();
+}
+
+function newGameSamePlayers(){ 
+  state.screen = "setup"; 
+  if(state.gameMode === "network") broadcastState();
+  render(); 
 }
 
 function shuffle(arr){
@@ -453,10 +557,17 @@ function render(){
     html += renderSetupBody();
   }
   else if(state.screen === "reveal"){ html += renderReveal(); }
+  else if(state.screen === "clues"){ html += renderClues(); }
+  else if(state.screen === "vote"){ html += renderVote(); }
+  else if(state.screen === "whiteGuess"){ html += renderWhiteGuess(); }
+  else if(state.screen === "eliminationReveal"){ html += renderEliminationReveal(); }
+  else if(state.screen === "end"){ html += renderEnd(); }
 
   document.getElementById("app").innerHTML = html;
   var ni = document.getElementById("nameInput");
   if(ni){ ni.addEventListener("keydown", function(e){ if(e.key==="Enter") addPlayer(); }); ni.focus({preventScroll:true}); }
+  var wg = document.getElementById("whiteGuessInput");
+  if(wg){ wg.addEventListener("keydown", function(e){ if(e.key==="Enter") submitWhiteGuess(); }); wg.focus({preventScroll:true}); }
   var pj = document.getElementById("pseudoJoin");
   if(pj){ pj.addEventListener("keydown", function(e){ if(e.key==="Enter") connectToRoom(); }); pj.focus({preventScroll:true}); }
 }
@@ -513,7 +624,6 @@ function renderSetupBody(){
 
 function renderReveal(){
   if(state.gameMode === "network") {
-    // Retrouver le rôle du joueur connecté en comparant son pseudo
     var myRole = state.players.find(function(p){ return p.name === myName; }) || state.players[0];
     var html = '<div class="panel center" style="padding:40px 18px;">';
     
@@ -549,6 +659,50 @@ function renderReveal(){
     html += '<button class="btn btn-ghost" style="margin-top:20px;" onclick="nextReveal()">Joueur suivant &#8250;</button>';
   }
   html += '</div>';
+  return html;
+}
+
+function renderClues(){
+  var order = aliveClueOrder();
+  var currentId = order[state.clueTurn];
+  var current = state.players.find(function(p){return p.id === currentId;});
+  var html = '<div class="panel center"><h2>Manche '+state.round+'</h2>';
+  html += '<p class="dim">Tour de parole de</p><p class="wordbig">'+esc(current.name)+'</p>';
+  html += '<p class="dim" style="margin-top:10px;font-size:1rem;">Donnez votre indice à l\'oral</p>';
+  html += '<button class="btn btn-primary" style="margin-top:20px;" onclick="nextClueTurn()">Indice suivant &#8250;</button></div>';
+  return html;
+}
+
+function renderVote(){
+  var alive = state.players.filter(function(p){return p.alive;});
+  var html = '<div class="panel center"><h2>Interrogatoire & Vote</h2><p class="dim" style="margin-bottom:10px;">Désignez le suspect à éliminer :</p>';
+  alive.forEach(function(p){
+    var sel = state.selectedVote === p.id;
+    html += '<button class="btn '+(sel?'btn-primary':'btn-ghost')+'" style="margin-top:8px;" onclick="selectVote('+p.id+')">'+esc(p.name)+'</button>';
+  });
+  html += '<button class="btn btn-primary" style="margin-top:15px;" '+(state.selectedVote==null?"disabled":"")+' onclick="confirmVote()">Confirmer l\'inculpation</button></div>';
+  return html;
+}
+
+function renderWhiteGuess(){
+  var html = '<div class="panel center"><h2>Mr. White démasqué</h2><p class="dim">Dernière chance : devinez le mot des civils !</p>';
+  html += '<input type="text" id="whiteGuessInput" placeholder="Votre déposition">';
+  html += '<button class="btn btn-primary" onclick="submitWhiteGuess()">Valider</button></div>';
+  return html;
+}
+
+function renderEliminationReveal(){
+  var p = state.justEliminated;
+  var html = '<div class="panel center"><h2>Résultat de l\'inculpation</h2>';
+  html += '<p class="dim">'+esc(p.name)+' était</p><div class="stamp" style="margin:15px 0;">'+ROLE_LABEL[p.role]+'</div>';
+  html += '<button class="btn btn-primary" onclick="proceedAfterElimination()">Poursuivre l\'enquête</button></div>';
+  return html;
+}
+
+function renderEnd(){
+  var label = state.winner==="civils" ? "Les Civils gagnent !" : (state.winner==="white" ? "Mr. White gagne !" : "Les Infiltrés gagnent !");
+  var html = '<div class="panel center"><h2>Fin de l\'affaire</h2><div class="stamp olive" style="margin:20px 0;">'+label+'</div>';
+  html += '<button class="btn btn-primary" onclick="newGameSamePlayers()">Nouvelle affaire</button></div>';
   return html;
 }
 
