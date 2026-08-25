@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Undercover — Mode Multijoueur Réseau</title>
-<!-- Bibliothèque PeerJS pour connecter les téléphones entre eux -->
+<!-- Intégration de la bibliothèque PeerJS pour connecter les téléphones en P2P -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <style>
   :root{
@@ -65,10 +65,10 @@
 <div id="app"></div>
 
 <script>
-// --- GESTION DU RÉSEAU ET DES TÉLÉPHONES ---
+// --- VARIABLES DE GESTION RÉSEAU ---
 var peer = null;
-var conn = null; // Utilisé si on est invité pour parler à l'hôte
-var connections = []; // Utilisé si on est l'hôte pour parler aux invités
+var conn = null; // Connexion vers l'hôte (pour les invités)
+var connections = []; // Liste des connexions entrantes (pour l'hôte)
 var isHost = false;
 var myName = "";
 var roomCode = "";
@@ -78,7 +78,7 @@ var gameData = {
     screen: "setup"
 };
 
-// Génère un code de salon aléatoire à 4 lettres/chiffres
+// Génère un code de salon aléatoire à 4 caractères
 function generateRoomCode() {
     var chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
     var code = "";
@@ -88,13 +88,13 @@ function generateRoomCode() {
 
 function initPeer(onOpenCallback) {
     if(peer) return;
-    peer = new Peer(); // Crée une connexion PeerJS anonyme
+    peer = new Peer();
     peer.on('open', function(id) {
         if(onOpenCallback) onOpenCallback(id);
     });
 }
 
-// --- ACTIONS DU HÔTE ---
+// --- LOGIQUE HÔTE ---
 function createRoom() {
     var inputName = document.getElementById("pseudoInput");
     if(!inputName || !inputName.value.trim()) { alert("Entre un pseudo !"); return; }
@@ -102,24 +102,20 @@ function createRoom() {
     isHost = true;
     roomCode = generateRoomCode();
 
-    initPeer(function(id) {
-        // On lie le PeerJS ID personnalisé basé sur notre code de salon
-        // Pour faire simple, on initialise le serveur hôte
-        gameData.players = [{ id: peer.id, name: myName, role: "civil", word: "" }];
+    if(peer) peer.destroy();
+    peer = new Peer(roomCode); // On fixe l'identifiant PeerJS avec le code du salon
+
+    peer.on('open', function(id) {
+        gameData.players = [{ id: id, name: myName, role: "civil", word: "" }];
         render();
     });
 
-    // Écoute les connexions entrantes des autres téléphones
-    setTimeout(function() {
-        if(peer) {
-            peer.on('connection', function(c) {
-                connections.push(c);
-                c.on('data', function(data) {
-                    handleHostData(c, data);
-                });
-            });
-        }
-    }, 1000);
+    peer.on('connection', function(c) {
+        connections.push(c);
+        c.on('data', function(data) {
+            handleHostData(c, data);
+        });
+    });
 }
 
 function handleHostData(c, data) {
@@ -136,7 +132,7 @@ function broadcastState() {
     });
 }
 
-// --- ACTIONS DE L'INVITÉ ---
+// --- LOGIQUE INVITÉ ---
 function joinRoomModal() {
     gameData.screen = "join_form";
     render();
@@ -145,16 +141,36 @@ function joinRoomModal() {
 function connectToRoom() {
     var inputName = document.getElementById("pseudoJoin");
     var inputCode = document.getElementById("roomCodeInput");
-    if(!inputName.value.trim() || !inputCode.value.trim()) { alert("Remplis tous les champs !"); return; }
+    
+    if(!inputName.value.trim() || !inputCode.value.trim()) { 
+        alert("Remplis tous les champs !"); 
+        return; 
+    }
     
     myName = inputName.value.trim();
     roomCode = inputCode.value.trim().toUpperCase();
     isHost = false;
 
     initPeer(function(id) {
-        // Connexion à l'hôte (Note : en production, on connecte via l'ID réseau, simplifié ici par salon)
-        alert("Connexion au salon " + roomCode + " en cours...");
-        // Logique de liaison réseau simplifiée pour les tests locaux ou distants
+        conn = peer.connect(roomCode); // Connexion vers l'hôte en utilisant le code
+
+        conn.on('open', function() {
+            conn.send({ type: "JOIN", name: myName });
+            gameData.screen = "waiting_room";
+            render();
+        });
+
+        conn.on('data', function(data) {
+            if(data.type === "STATE_UPDATE") {
+                gameData = data.data;
+                render();
+            }
+        });
+
+        conn.on('error', function(err) {
+            alert("Impossible de se connecter au salon. Vérifie le code.");
+            console.error(err);
+        });
     });
 }
 
@@ -176,10 +192,10 @@ function render() {
             html += '<h2>Salon de l\'enquêteur</h2>';
             html += '<p class="dim">Code du salon à partager à tes amis :</p>';
             html += '<div class="codebox">'+roomCode+'</div>';
-            html += '<p class="dim" style="margin-bottom:15px;">Joueurs connectés dans le salon :</p>';
+            html += '<p class="dim" style="margin-bottom:15px;">Joueurs connectés :</p>';
             var chips = gameData.players.map(function(p){ return '<div class="chip">'+p.name+'</div>'; }).join("");
             html += '<div class="chips" style="justify-content:center;">'+chips+'</div>';
-            html += '<button class="btn btn-primary" onclick="startMultigame()">Lancer la partie</button>';
+            html += '<button class="btn btn-primary" onclick="alert(\'Lancement du jeu en réseau en cours de développement !\')">Lancer la partie</button>';
             html += '</div>';
         }
     } else if(gameData.screen === "join_form") {
@@ -189,6 +205,12 @@ function render() {
         html += '<input type="text" id="roomCodeInput" placeholder="Code du salon (ex: A4F9)" autocomplete="off" style="text-transform:uppercase;">';
         html += '<button class="btn btn-primary" onclick="connectToRoom()">Se connecter au salon</button>';
         html += '<button class="btn btn-ghost" onclick="gameData.screen=\'setup\'; render();">Retour</button>';
+        html += '</div>';
+    } else if(gameData.screen === "waiting_room") {
+        html += '<div class="panel center">';
+        html += '<h2>Salon d\'attente</h2>';
+        html += '<p class="dim">Connecté au salon <strong>'+roomCode+'</strong>.</p>';
+        html += '<p class="dim" style="margin-top:15px;">En attente que l\'hôte lance la partie...</p>';
         html += '</div>';
     }
 
