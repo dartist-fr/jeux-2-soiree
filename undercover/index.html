@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0b0616">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Undercover — Salle d'Arcade Edition</title>
+<title>Undercover • jeux2soiree</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -637,6 +637,13 @@ function startGame(){
 
 function revealCard(){ state.revealed = true; render(); }
 
+function networkProceedToClues(){
+  if(state.gameMode !== "network" || !isHost) return;
+  state.screen = "clues";
+  broadcastState();
+  render();
+}
+
 function nextReveal(){
   if(state.revealIndex + 1 >= state.players.length){ 
     state.screen = "clues"; 
@@ -900,6 +907,15 @@ function renderReveal(){
         html += '<div class="wordbig">'+(myRole ? (myRole.word || "Aucun (Mr. White)") : "Mot secret")+'</div>';
     }
     html += '</div>';
+
+    if(isHost){
+      html += '<div class="panel center">';
+      html += '<p class="dim" style="margin-bottom:10px;">Une fois que tout le monde a vu son rôle sur son téléphone :</p>';
+      html += '<button class="btn btn-primary" onclick="networkProceedToClues()">Tout le monde est prêt &#8250; Passer aux indices</button>';
+      html += '</div>';
+    } else {
+      html += '<p class="center dim" style="margin-top:15px;">En attente que l\'hôte lance la phase d\'indices...</p>';
+    }
     return html;
   }
 
