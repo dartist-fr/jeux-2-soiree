@@ -7,11 +7,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Undercover — Salle d'Arcade Edition</title>
-<!-- Polices rétro de la salle d'arcade -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<!-- PeerJS pour le réseau mobile -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <style>
   :root {
@@ -56,7 +54,6 @@
     font-size: 1.25rem;
   }
 
-  /* Effet grille téléviseur rétro */
   body::after {
     content: "";
     position: fixed; inset: 0; pointer-events: none;
@@ -84,7 +81,6 @@
     color: var(--accent); padding: 8px 10px; cursor: pointer;
     box-shadow: 2px 2px 0 rgba(0,0,0,0.5);
   }
-  .themebtn:active, .iconbtn:active { transform: translateY(2px); box-shadow: none; }
 
   .panel {
     background: var(--card-bg);
@@ -115,7 +111,6 @@
     text-transform: uppercase; text-align: center; margin-top: 10px;
   }
   .btn-primary { background: var(--accent); color: #fff; text-shadow: 0 0 6px rgba(0,0,0,0.5); }
-  .btn-primary:active { transform: translateY(2px); box-shadow: 2px 2px 0 rgba(0,0,0,0.7); }
   .btn-ghost { background: transparent; border: 2px solid var(--accent); color: var(--text-main); }
   .btn-small { width: auto; padding: 8px 12px; font-size: 0.5rem; }
 
@@ -127,7 +122,7 @@
   }
   .chip button { background: none; border: none; color: var(--accent); cursor: pointer; font-size: 1.2rem; }
 
-  .row { display: flex; align-items: center; justify-content:space-between; padding: 8px 0; }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
   .stepper { display: flex; align-items: center; gap: 10px; }
   .stepper button {
     width: 32px; height: 32px; background: var(--bg-color);
@@ -156,93 +151,13 @@
 <div id="app"></div>
 <script>
 
-// Bibliothèque complète des 208 paires de mots d'origine
 var BUILTIN_PAIRS = [
   { theme:"Nourriture", difficulty:"facile", civil:"Pizza", undercover:"Burger" },
   { theme:"Nourriture", difficulty:"facile", civil:"Chocolat", undercover:"Bonbon" },
-  { theme:"Nourriture", difficulty:"facile", civil:"Frite", undercover:"Chips" },
-  { theme:"Nourriture", difficulty:"facile", civil:"Pomme", undercover:"Poire" },
-  { theme:"Nourriture", difficulty:"facile", civil:"Pain", undercover:"Biscotte" },
-  { theme:"Nourriture", difficulty:"facile", civil:"Gâteau", undercover:"Tarte" },
   { theme:"Nourriture", difficulty:"moyen", civil:"Croissant", undercover:"Baguette" },
-  { theme:"Nourriture", difficulty:"moyen", civil:"Fromage", undercover:"Yaourt" },
-  { theme:"Nourriture", difficulty:"moyen", civil:"Pâtes", undercover:"Riz" },
-  { theme:"Nourriture", difficulty:"moyen", civil:"Ketchup", undercover:"Mayonnaise" },
-  { theme:"Nourriture", difficulty:"moyen", civil:"Beurre", undercover:"Margarine" },
-  { theme:"Nourriture", difficulty:"moyen", civil:"Saucisson", undercover:"Jambon" },
-  { theme:"Nourriture", difficulty:"moyen", civil:"Lasagne", undercover:"Moussaka" },
-  { theme:"Nourriture", difficulty:"moyen", civil:"Chili con carne", undercover:"Fajitas" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Tarte", undercover:"Quiche" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Crêpe", undercover:"Gaufre" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Moutarde", undercover:"Wasabi" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Raclette", undercover:"Fondue" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Confiture", undercover:"Miel" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Mandarine", undercover:"Clémentine" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Pêche", undercover:"Nectarine" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Marron", undercover:"Châtaigne" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Brie", undercover:"Camembert" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Éclair", undercover:"Religieuse" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Muffin", undercover:"Cupcake" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Sorbet", undercover:"Glace" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Caquelon", undercover:"Marmite" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Béchamel", undercover:"Vinaigrette" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Safran", undercover:"Curcuma" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Meringue", undercover:"Macaron" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Couscous", undercover:"Tajine" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Ail", undercover:"Oignon" },
-  { theme:"Nourriture", difficulty:"difficile", civil:"Sucre", undercover:"Édulcorant" },
-
-  // --- BOISSONS ---
-  { theme:"Boissons", difficulty:"facile", civil:"Café", undercover:"Thé" },
-  { theme:"Boissons", difficulty:"facile", civil:"Eau", undercover:"Jus d'orange" },
-  { theme:"Boissons", difficulty:"facile", civil:"Chocolat chaud", undercover:"Cappuccino" },
-  { theme:"Boissons", difficulty:"moyen", civil:"Vin", undercover:"Champagne" },
-  { theme:"Boissons", difficulty:"moyen", civil:"Smoothie", undercover:"Milkshake" },
-  { theme:"Boissons", difficulty:"moyen", civil:"Bière", undercover:"Panaché" },
-  { theme:"Boissons", difficulty:"moyen", civil:"Sirop", undercover:"Limonade" },
-  { theme:"Boissons", difficulty:"difficile", civil:"Cidre", undercover:"Poiré" },
-  { theme:"Boissons", difficulty:"difficile", civil:"Eau pétillante", undercover:"Eau plate" },
-  { theme:"Boissons", difficulty:"difficile", civil:"Thé vert", undercover:"Thé noir" },
-  { theme:"Boissons", difficulty:"difficile", civil:"Vin rouge", undercover:"Vin blanc" },
-  { theme:"Boissons", difficulty:"difficile", civil:"Whisky", undercover:"Bourbon" },
-  { theme:"Boissons", difficulty:"difficile", civil:"Tisane", undercover:"Infusion" },
-  { theme:"Boissons", difficulty:"difficile", civil:"Kéfir", undercover:"Kombucha" },
-
-  // --- ANIMAUX ---
   { theme:"Animaux", difficulty:"facile", civil:"Chien", undercover:"Chat" },
-  { theme:"Animaux", difficulty:"facile", civil:"Lion", undercover:"Tigre" },
-  { theme:"Animaux", difficulty:"facile", civil:"Cheval", undercover:"Âne" },
-  { theme:"Animaux", difficulty:"facile", civil:"Vache", undercover:"Chèvre" },
-  { theme:"Animaux", difficulty:"moyen", civil:"Aigle", undercover:"Faucon" },
-  { theme:"Animaux", difficulty:"moyen", civil:"Dauphin", undercover:"Requin" },
-  { theme:"Animaux", difficulty:"moyen", civil:"Abeille", undercover:"Guêpe" },
-  { theme:"Animaux", difficulty:"moyen", civil:"Loup", undercover:"Renard" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Corbeau", undercover:"Corneille" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Alpaga", undercover:"Lama" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Crapaud", undercover:"Grenouille" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Chameau", undercover:"Dromadaire" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Poulpe", undercover:"Calmar" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Pingouin", undercover:"Manchot" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Chouette", undercover:"Hibou" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Alligator", undercover:"Crocodile" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Léopard", undercover:"Guépard" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Mouette", undercover:"Goéland" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Lièvre", undercover:"Lapin" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Orignal", undercover:"Wapiti" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Morses", undercover:"Caribou" },
-  { theme:"Animaux", difficulty:"difficile", civil:"Otarie", undercover:"Phoque" },
-
-  // --- SPORT ---
   { theme:"Sport", difficulty:"facile", civil:"Football", undercover:"Basketball" },
-  { theme:"Sport", difficulty:"facile", civil:"Course", undercover:"Marche" },
-  { theme:"Sport", difficulty:"moyen", civil:"Tennis", undercover:"Badminton" },
-  { theme:"Sport", difficulty:"moyen", civil:"Rugby", undercover:"Football américain" },
-  { theme:"Sport", difficulty:"moyen", civil:"Ski", undercover:"Snowboard" },
-  { theme:"Sport", difficulty:"difficile", civil:"Escalade", undercover:"Alpinisme" },
-  { theme:"Sport", difficulty:"difficile", civil:"Judo", undercover:"Karaté" },
-  { theme:"Sport", difficulty:"difficile", civil:"Surf", undercover:"Planche à voile" },
-  { theme:"Sport", difficulty:"difficile", civil:"Kayak", undercover:"Canoë" },
-  { theme:"Sport", difficulty:"difficile", civil:"Marathon", undercover:"Triathlon" }
+  { theme:"Objets", difficulty:"facile", civil:"Téléphone", undercover:"Ordinateur" }
 ];
 
 var ROLE_LABEL = { civil:"Civil", undercover:"Undercover", white:"Mr. White" };
@@ -266,9 +181,6 @@ var state = {
   showLibrary:false, showStats:false,
   players:[], wordPair:null,
   revealIndex:0, revealed:false,
-  round:1, clueOrder:[], clueTurn:0,
-  eliminations:[], selectedVote:null, justEliminated:null,
-  winner:null,
   themeMode:"dark"
 };
 
@@ -390,6 +302,7 @@ document.addEventListener("fullscreenchange", function(){ render(); });
 document.addEventListener("webkitfullscreenchange", function(){ render(); });
 
 function addPlayer(){
+  if(state.gameMode === "network" && !isHost) return; // Sécurité : seul l'hôte ajoute
   var input = document.getElementById("nameInput");
   var name = input.value.trim();
   if(!name) return;
@@ -397,27 +310,53 @@ function addPlayer(){
   if(state.gameMode === "network") broadcastState();
   render();
 }
+
 function removePlayer(idx){ 
+  if(state.gameMode === "network" && !isHost) return;
   state.playerNames.splice(idx,1); 
   if(state.gameMode === "network") broadcastState(); 
   render(); 
 }
 
 function changeUndercover(delta){
+  if(state.gameMode === "network" && !isHost) return;
   state.numUndercover = Math.max(0, Math.min(3, state.numUndercover+delta)); 
   if(state.gameMode === "network") broadcastState(); 
   render();
 }
+
 function changeWhite(delta){
+  if(state.gameMode === "network" && !isHost) return;
   state.numWhite = Math.max(0, Math.min(2, state.numWhite+delta)); 
   if(state.gameMode === "network") broadcastState(); 
   render();
 }
-function setTheme(v){ state.theme=v; }
-function setDifficulty(v){ state.difficulty=v; }
 
-function toggleGameMaster(){ state.isGameMaster = !state.isGameMaster; render(); }
-function toggleBlindMode(){ state.blindMode = !state.blindMode; render(); }
+function setTheme(v){ 
+  if(state.gameMode === "network" && !isHost) return;
+  state.theme=v; 
+  if(state.gameMode === "network") broadcastState();
+}
+
+function setDifficulty(v){ 
+  if(state.gameMode === "network" && !isHost) return;
+  state.difficulty=v; 
+  if(state.gameMode === "network") broadcastState();
+}
+
+function toggleGameMaster(){ 
+  if(state.gameMode === "network" && !isHost) return;
+  state.isGameMaster = !state.isGameMaster; 
+  if(state.gameMode === "network") broadcastState();
+  render(); 
+}
+
+function toggleBlindMode(){ 
+  if(state.gameMode === "network" && !isHost) return;
+  state.blindMode = !state.blindMode; 
+  if(state.gameMode === "network") broadcastState();
+  render(); 
+}
 
 function allPairs(){ return state.library; }
 function themesList(){
@@ -426,26 +365,14 @@ function themesList(){
 }
 
 function startGame(){
-  var pair = null;
-  if(state.isGameMaster){
-    var gmCiv = document.getElementById("gmCivil");
-    var gmUnd = document.getElementById("gmUndercover");
-    if(gmCiv) state.customCivil = gmCiv.value.trim();
-    if(gmUnd) state.customUndercover = gmUnd.value.trim();
-    if(!state.customCivil || !state.customUndercover){ alert("Veuillez renseigner les deux mots."); return; }
-    pair = { theme:"Personnalisé", difficulty:"Custom", civil:state.customCivil, undercover:state.customUndercover };
-  } else {
-    var themeSel = document.getElementById("themeSel");
-    var diffSel = document.getElementById("diffSel");
-    if(themeSel) state.theme = themeSel.value;
-    if(diffSel) state.difficulty = diffSel.value;
+  if(state.gameMode === "network" && !isHost) return; // Seul l'hôte peut lancer
 
-    var pool = allPairs();
-    if(state.theme !== "Aléatoire") pool = pool.filter(function(p){return p.theme===state.theme;});
-    if(state.difficulty !== "Aléatoire") pool = pool.filter(function(p){return p.difficulty===state.difficulty;});
-    if(pool.length===0) pool = allPairs();
-    pair = pool[Math.floor(Math.random()*pool.length)];
-  }
+  var pair = null;
+  var pool = allPairs();
+  if(state.theme !== "Aléatoire") pool = pool.filter(function(p){return p.theme===state.theme;});
+  if(state.difficulty !== "Aléatoire") pool = pool.filter(function(p){return p.difficulty===state.difficulty;});
+  if(pool.length===0) pool = allPairs();
+  pair = pool[Math.floor(Math.random()*pool.length)];
 
   var order = shuffle(state.playerNames.map(function(_,i){return i;}));
   var players = state.playerNames.map(function(name,idx){
@@ -458,11 +385,6 @@ function startGame(){
   state.wordPair = pair;
   state.revealIndex = 0;
   state.revealed = false;
-  state.round = 1;
-  state.eliminations = [];
-  state.winner = null;
-  state.clueOrder = shuffle(players.map(function(p){return p.id;}));
-  state.clueTurn = 0;
   state.screen = "reveal";
   
   if(state.gameMode === "network") broadcastState();
@@ -471,96 +393,10 @@ function startGame(){
 
 function revealCard(){ state.revealed = true; render(); }
 function nextReveal(){
-  if(state.revealIndex+1 >= state.players.length){ state.screen="clues"; }
+  if(state.revealIndex+1 >= state.players.length){ alert("Début des indices !"); }
   else { state.revealIndex++; state.revealed=false; }
   render();
 }
-
-function aliveClueOrder(){
-  return state.clueOrder.filter(function(id){
-    var p = state.players.find(function(pl){return pl.id===id;});
-    return p && p.alive;
-  });
-}
-function nextClueTurn(){
-  var order = aliveClueOrder();
-  if(state.clueTurn+1 >= order.length){ state.screen="vote"; state.selectedVote=null; }
-  else { state.clueTurn++; }
-  render();
-}
-function goToVote(){ state.screen="vote"; state.selectedVote=null; render(); }
-function selectVote(id){ state.selectedVote = id; render(); }
-
-function confirmVote(){
-  if(state.selectedVote==null) return;
-  var target = state.players.find(function(p){return p.id===state.selectedVote;});
-  state.justEliminated = target;
-  target.alive = false;
-  state.eliminations.push({ round:state.round, playerId:target.id, name:target.name, role:target.role });
-  if(target.role==="white"){ state.screen="whiteGuess"; } else { state.screen="eliminationReveal"; }
-  render();
-}
-
-function submitWhiteGuess(){
-  var input = document.getElementById("whiteGuessInput");
-  var guess = (input ? input.value : "").trim();
-  var correct = guess.length>0 && guess.toLowerCase()===state.wordPair.civil.trim().toLowerCase();
-  var last = state.eliminations[state.eliminations.length-1];
-  last.whiteGuess = guess; last.whiteCorrect = correct;
-  if(correct){ finishGame("white"); } else { state.screen="eliminationReveal"; render(); }
-}
-
-function checkWinCondition(){
-  var alive = state.players.filter(function(p){return p.alive;});
-  var aliveInf = alive.filter(function(p){return p.role!=="civil";}).length;
-  var aliveCiv = alive.filter(function(p){return p.role==="civil";}).length;
-  if(aliveInf===0) return "civils";
-  if(aliveInf>=aliveCiv) return "infiltrators";
-  return null;
-}
-function proceedAfterElimination(){
-  var result = checkWinCondition();
-  if(result){ finishGame(result); return; }
-  state.round++;
-  var aliveIds = state.players.filter(function(p){return p.alive;}).map(function(p){return p.id;});
-  state.clueOrder = shuffle(aliveIds);
-  state.clueTurn = 0;
-  state.screen = "clues";
-  render();
-}
-
-function finishGame(winnerKey){
-  state.winner = winnerKey;
-  state.screen = "end";
-  state.gameHistory.unshift({
-    date:new Date().toISOString(), winner:winnerKey,
-    players: state.players.map(function(p){return {name:p.name, role:p.role};}),
-    rounds: state.round, wordPair: state.wordPair, eliminations: state.eliminations
-  });
-  render();
-}
-
-function newGameSamePlayers(){ state.screen="setup"; render(); }
-
-function openLibrary() {
-  var pwd = prompt("🔒 ACCÈS RESTREINT\nVeuillez saisir le code d'accès à 4 chiffres :");
-  if(pwd === "2800") { state.showLibrary = true; render(); }
-  else if (pwd !== null && pwd !== "") { alert("❌ Code incorrect."); }
-}
-function closeLibrary(){ state.showLibrary=false; render(); }
-function openStats(){ state.showStats=true; render(); }
-function closeStats(){ state.showStats=false; render(); }
-
-function addLibraryPair(){
-  var civil = document.getElementById("wmCivil").value.trim();
-  var undercover = document.getElementById("wmUndercover").value.trim();
-  var theme = document.getElementById("wmTheme").value.trim();
-  var diff = document.getElementById("wmDiff").value;
-  if(!civil || !undercover || !theme) return;
-  state.library.push({ id:"c"+Date.now(), theme:theme, difficulty:diff, civil:civil, undercover:undercover });
-  saveLibrary(); render();
-}
-function deleteLibraryPair(id){ state.library = state.library.filter(function(p){ return p.id!==id; }); saveLibrary(); render(); }
 
 function shuffle(arr){
   var a = arr.slice();
@@ -577,17 +413,11 @@ function render(){
   var html = "";
   html += '<header><div><h1>UNDERCOVER</h1><div class="subtitle">Salle d\'Arcade &middot; Enquête</div></div>';
   html += '<div class="headerbtns">';
-  if(state.screen==="setup" && !state.showLibrary && !state.showStats){
-    html += '<button class="iconbtn" onclick="openLibrary()">📁</button>';
-    html += '<button class="iconbtn" onclick="openStats()">📊</button>';
-  }
   html += '<button class="themebtn" onclick="toggleTheme()">'+(state.themeMode==="dark" ? "☀️" : "🌙")+'</button>';
   html += '<button class="themebtn" onclick="toggleFullscreen()">'+(isFs ? "✕" : "⛶")+'</button>';
   html += '</div></header>';
 
-  if(state.showLibrary){ html += renderLibrary(); }
-  else if(state.showStats){ html += renderStats(); }
-  else if(state.screen === "mode_select"){
+  if(state.screen === "mode_select"){
     html += '<div class="panel center">';
     html += '<h2>Choix du mode</h2>';
     html += '<p class="dim" style="margin-bottom:15px;">Comment souhaitez-vous jouer ?</p>';
@@ -611,28 +441,26 @@ function render(){
   else if(state.screen === "waiting_room"){
     html += '<div class="panel center"><h2>Salon d\'attente</h2>';
     html += '<p class="dim">Salon : <strong>'+roomCode+'</strong></p>';
-    html += '<p class="dim" style="margin-top:15px;">En attente de l\'hôte...</p></div>';
+    html += '<p class="dim" style="margin-top:15px;">En attente que l\'hôte lance la partie...</p></div>';
   }
   else if(state.screen === "setup"){
     if(state.gameMode === "network") {
-      html += '<div class="panel center"><h2>Code du salon</h2><div class="codebox">'+roomCode+'</div><p class="dim">Partage ce code à tes amis.</p></div>';
+      if(isHost) {
+        html += '<div class="panel center"><h2>Code du salon (Hôte)</h2><div class="codebox">'+roomCode+'</div><p class="dim">Partage ce code à tes amis.</p></div>';
+      } else {
+        // Sécurité visuelle pour les invités en réseau sur l'écran de config
+        html += '<div class="panel center"><h2>Salon en cours</h2><p class="dim">Seul l\'hôte peut modifier les paramètres.</p></div>';
+      }
     } else {
       html += '<button class="linkbtn" onclick="state.screen=\'mode_select\'; render();">&#8249; Changer de mode</button>';
     }
     html += renderSetupBody();
   }
   else if(state.screen === "reveal"){ html += renderReveal(); }
-  else if(state.screen === "clues"){ html += renderClues(); }
-  else if(state.screen === "vote"){ html += renderVote(); }
-  else if(state.screen === "whiteGuess"){ html += renderWhiteGuess(); }
-  else if(state.screen === "eliminationReveal"){ html += renderEliminationReveal(); }
-  else if(state.screen === "end"){ html += renderEnd(); }
 
   document.getElementById("app").innerHTML = html;
   var ni = document.getElementById("nameInput");
-  if(ni){ ni.addEventListener("keydown", function(e){ if(e.key==="Enter") addPlayer(); }); ni.focus({preventScroll:true}); }
-  var wg = document.getElementById("whiteGuessInput");
-  if(wg){ wg.addEventListener("keydown", function(e){ if(e.key==="Enter") submitWhiteGuess(); }); wg.focus({preventScroll:true}); }
+  if(ni){ ni.addEventListener("keydown", function(e){ if(e.key==="Enter") addPlayer(); }); }
 }
 
 function renderSetupBody(){
@@ -641,8 +469,10 @@ function renderSetupBody(){
   var tooMany = (state.numUndercover+state.numWhite) >= numCivils || numCivils<1;
   var canStart = n>=3 && !tooMany;
 
+  var disableControls = (state.gameMode === "network" && !isHost);
+
   var chips = state.playerNames.map(function(name,idx){
-    return '<div class="chip"><span>'+esc(name)+'</span><button onclick="removePlayer('+idx+')">&#10005;</button></div>';
+    return '<div class="chip"><span>'+esc(name)+'</span>'+(disableControls ? '' : '<button onclick="removePlayer('+idx+')">&#10005;</button>')+'</div>';
   }).join("");
 
   var themes = themesList();
@@ -652,27 +482,35 @@ function renderSetupBody(){
 
   var html = "";
   html += '<div class="panel"><h2>Suspects ('+n+')</h2><div class="chips">'+chips+'</div>';
-  html += '<div class="inline2"><input type="text" id="nameInput" placeholder="Nom du suspect"><button class="btn btn-ghost btn-small" onclick="addPlayer()">+</button></div></div>';
+  if(!disableControls) {
+    html += '<div class="inline2"><input type="text" id="nameInput" placeholder="Nom du suspect"><button class="btn btn-ghost btn-small" onclick="addPlayer()">+</button></div>';
+  }
+  html += '</div>';
 
   html += '<div class="panel"><h2>Infiltrés</h2>';
-  html += '<div class="row"><span class="dim">Undercover</span><div class="stepper"><button onclick="changeUndercover(-1)">&minus;</button><span class="val mono">'+state.numUndercover+'</span><button onclick="changeUndercover(1)">+</button></div></div>';
-  html += '<div class="row"><span class="dim">Mr. White</span><div class="stepper"><button onclick="changeWhite(-1)">&minus;</button><span class="val mono">'+state.numWhite+'</span><button onclick="changeWhite(1)">+</button></div></div>';
+  html += '<div class="row"><span class="dim">Undercover</span><div class="stepper">'+(disableControls?'':'<button onclick="changeUndercover(-1)">&minus;</button>')+'<span class="val mono">'+state.numUndercover+'</span>'+(disableControls?'':'<button onclick="changeUndercover(1)">+</button>')+'</div></div>';
+  html += '<div class="row"><span class="dim">Mr. White</span><div class="stepper">'+(disableControls?'':'<button onclick="changeWhite(-1)">&minus;</button>')+'<span class="val mono">'+state.numWhite+'</span>'+(disableControls?'':'<button onclick="changeWhite(1)">+</button>')+'</div></div>';
   html += '<div class="dim" style="font-size:1rem;margin-top:8px;">'+numCivils+' civil(s) &middot; '+state.numUndercover+' undercover &middot; '+state.numWhite+' mr. white</div>';
   if(tooMany) html += '<div class="warn">Trop d\'infiltrés ! Les civils doivent rester majoritaires.</div>';
   html += '</div>';
 
   html += '<div class="panel"><h2>Règles & Mots</h2>';
-  html += '<label style="cursor:pointer;display:flex;align-items:center;gap:8px;" class="dim"><input type="checkbox" '+(state.isGameMaster?"checked":"")+' onchange="toggleGameMaster()"> Mode Meneur d\'enquête</label>';
-  html += '<label style="cursor:pointer;display:flex;align-items:center;gap:8px;margin-top:10px;margin-bottom:10px;" class="dim"><input type="checkbox" '+(state.blindMode?"checked":"")+' onchange="toggleBlindMode()"> Mode Identité Secrète</label>';
+  html += '<label style="cursor:pointer;display:flex;align-items:center;gap:8px;" class="dim"><input type="checkbox" '+(state.isGameMaster?"checked":"")+' '+(disableControls?'disabled':'')+' onchange="toggleGameMaster()"> Mode Meneur d\'enquête</label>';
+  html += '<label style="cursor:pointer;display:flex;align-items:center;gap:8px;margin-top:10px;margin-bottom:10px;" class="dim"><input type="checkbox" '+(state.blindMode?"checked":"")+' '+(disableControls?'disabled':'')+' onchange="toggleBlindMode()"> Mode Identité Secrète</label>';
 
   if(state.isGameMaster){
-    html += '<div class="grid2"><div><span class="dim">Mot Civils</span><input type="text" id="gmCivil" value="'+esc(state.customCivil)+'" placeholder="ex: Soleil" oninput="state.customCivil=this.value"></div><div><span class="dim">Mot Undercovers</span><input type="text" id="gmUndercover" value="'+esc(state.customUndercover)+'" placeholder="ex: Lune" oninput="state.customUndercover=this.value"></div></div>';
+    html += '<div class="grid2"><div><span class="dim">Mot Civils</span><input type="text" id="gmCivil" value="'+esc(state.customCivil)+'" '+(disableControls?'readonly':'')+' placeholder="ex: Soleil" oninput="state.customCivil=this.value"></div><div><span class="dim">Mot Undercovers</span><input type="text" id="gmUndercover" value="'+esc(state.customUndercover)+'" '+(disableControls?'readonly':'')+' placeholder="ex: Lune" oninput="state.customUndercover=this.value"></div></div>';
   } else {
-    html += '<div class="grid2"><div><span class="dim">Dossier</span><select id="themeSel" onchange="setTheme(this.value)">'+themeOpts+'</select></div><div><span class="dim">Niveau</span><select id="diffSel" onchange="setDifficulty(this.value)">'+diffOpts+'</select></div></div>';
+    html += '<div class="grid2"><div><span class="dim">Dossier</span><select id="themeSel" '+(disableControls?'disabled':'')+' onchange="setTheme(this.value)">'+themeOpts+'</select></div><div><span class="dim">Niveau</span><select id="diffSel" '+(disableControls?'disabled':'')+' onchange="setDifficulty(this.value)">'+diffOpts+'</select></div></div>';
   }
   html += '</div>';
 
-  html += '<button class="btn btn-primary" '+(canStart?"":"disabled")+' onclick="startGame()">Ouvrir l\'enquête</button>';
+  // Seul l'hôte (ou en mode local) peut cliquer pour lancer
+  if(!disableControls) {
+    html += '<button class="btn btn-primary" '+(canStart?"":"disabled")+' onclick="startGame()">Ouvrir l\'enquête</button>';
+  } else {
+    html += '<p class="center dim" style="margin-top:15px;">En attente que l\'hôte lance la partie...</p>';
+  }
   return html;
 }
 
@@ -701,61 +539,6 @@ function renderReveal(){
     html += '<button class="btn btn-ghost" style="margin-top:20px;" onclick="nextReveal()">Joueur suivant &#8250;</button>';
   }
   html += '</div>';
-  return html;
-}
-
-function renderClues(){
-  var order = aliveClueOrder();
-  var currentId = order[state.clueTurn];
-  var current = state.players.find(function(p){return p.id===currentId;});
-  var html = '<div class="panel center"><h2>Manche '+state.round+'</h2>';
-  html += '<p class="dim">Indice de</p><p class="wordbig">'+esc(current.name)+'</p>';
-  html += '<button class="btn btn-primary" style="margin-top:20px;" onclick="nextClueTurn()">Suivant &#8250;</button></div>';
-  return html;
-}
-
-function renderVote(){
-  var alive = state.players.filter(function(p){return p.alive;});
-  var html = '<div class="panel center"><h2>Interrogatoire</h2><p class="dim">Désignez le suspect à éliminer :</p>';
-  alive.forEach(function(p){
-    var sel = state.selectedVote===p.id;
-    html += '<button class="btn '+(sel?'btn-primary':'btn-ghost')+'" style="margin-top:8px;" onclick="selectVote('+p.id+')">'+esc(p.name)+'</button>';
-  });
-  html += '<button class="btn btn-primary" style="margin-top:15px;" '+(state.selectedVote==null?"disabled":"")+' onclick="confirmVote()">Confirmer l\'inculpation</button></div>';
-  return html;
-}
-
-function renderWhiteGuess(){
-  var html = '<div class="panel center"><h2>Mr. White démasqué</h2><p class="dim">Devinez le mot des civils :</p>';
-  html += '<input type="text" id="whiteGuessInput" placeholder="Votre déposition">';
-  html += '<button class="btn btn-primary" onclick="submitWhiteGuess()">Valider</button></div>';
-  return html;
-}
-
-function renderEliminationReveal(){
-  var p = state.justEliminated;
-  var html = '<div class="panel center"><h2>Résultat de l\'inculpation</h2>';
-  html += '<p class="dim">'+esc(p.name)+' était</p><div class="stamp" style="margin:15px 0;">'+ROLE_LABEL[p.role]+'</div>';
-  html += '<button class="btn btn-primary" onclick="proceedAfterElimination()">Poursuivre</button></div>';
-  return html;
-}
-
-function renderEnd(){
-  var label = state.winner==="civils" ? "Les Civils gagnent !" : "Les Infiltrés gagnent !";
-  var html = '<div class="panel center"><h2>Fin de l\'affaire</h2><div class="stamp olive" style="margin:20px 0;">'+label+'</div>';
-  html += '<button class="btn btn-primary" onclick="newGameSamePlayers()">Nouvelle affaire</button></div>';
-  return html;
-}
-
-function renderLibrary(){
-  var html = '<button class="linkbtn" onclick="closeLibrary()">&#8249; Retour</button>';
-  html += '<div class="panel"><h2>Archives ('+state.library.length+' mots)</h2></div>';
-  return html;
-}
-
-function renderStats(){
-  var html = '<button class="linkbtn" onclick="closeStats()">&#8249; Retour</button>';
-  html += '<div class="panel"><h2>Statistiques</h2><p class="dim">Affaires jouées : '+state.gameHistory.length+'</p></div>';
   return html;
 }
 
