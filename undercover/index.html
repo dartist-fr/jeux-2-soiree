@@ -10,7 +10,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
-<!-- Inclusion de PeerJS pour gérer la connexion en ligne entre téléphones -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <style>
   :root {
@@ -153,13 +152,93 @@
 <div id="app"></div>
 <script>
 
+// Bibliothèque complète des 208 paires de mots
 var BUILTIN_PAIRS = [
   { theme:"Nourriture", difficulty:"facile", civil:"Pizza", undercover:"Burger" },
   { theme:"Nourriture", difficulty:"facile", civil:"Chocolat", undercover:"Bonbon" },
+  { theme:"Nourriture", difficulty:"facile", civil:"Frite", undercover:"Chips" },
+  { theme:"Nourriture", difficulty:"facile", civil:"Pomme", undercover:"Poire" },
+  { theme:"Nourriture", difficulty:"facile", civil:"Pain", undercover:"Biscotte" },
+  { theme:"Nourriture", difficulty:"facile", civil:"Gâteau", undercover:"Tarte" },
   { theme:"Nourriture", difficulty:"moyen", civil:"Croissant", undercover:"Baguette" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Fromage", undercover:"Yaourt" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Pâtes", undercover:"Riz" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Ketchup", undercover:"Mayonnaise" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Beurre", undercover:"Margarine" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Saucisson", undercover:"Jambon" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Lasagne", undercover:"Moussaka" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Chili con carne", undercover:"Fajitas" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Tarte", undercover:"Quiche" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Crêpe", undercover:"Gaufre" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Moutarde", undercover:"Wasabi" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Raclette", undercover:"Fondue" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Confiture", undercover:"Miel" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Mandarine", undercover:"Clémentine" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Pêche", undercover:"Nectarine" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Marron", undercover:"Châtaigne" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Brie", undercover:"Camembert" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Éclair", undercover:"Religieuse" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Muffin", undercover:"Cupcake" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Sorbet", undercover:"Glace" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Caquelon", undercover:"Marmite" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Béchamel", undercover:"Vinaigrette" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Safran", undercover:"Curcuma" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Meringue", undercover:"Macaron" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Couscous", undercover:"Tajine" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Ail", undercover:"Oignon" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Sucre", undercover:"Édulcorant" },
+
+  // --- BOISSONS ---
+  { theme:"Boissons", difficulty:"facile", civil:"Café", undercover:"Thé" },
+  { theme:"Boissons", difficulty:"facile", civil:"Eau", undercover:"Jus d'orange" },
+  { theme:"Boissons", difficulty:"facile", civil:"Chocolat chaud", undercover:"Cappuccino" },
+  { theme:"Boissons", difficulty:"moyen", civil:"Vin", undercover:"Champagne" },
+  { theme:"Boissons", difficulty:"moyen", civil:"Smoothie", undercover:"Milkshake" },
+  { theme:"Boissons", difficulty:"moyen", civil:"Bière", undercover:"Panaché" },
+  { theme:"Boissons", difficulty:"moyen", civil:"Sirop", undercover:"Limonade" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Cidre", undercover:"Poiré" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Eau pétillante", undercover:"Eau plate" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Thé vert", undercover:"Thé noir" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Vin rouge", undercover:"Vin blanc" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Whisky", undercover:"Bourbon" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Tisane", undercover:"Infusion" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Kéfir", undercover:"Kombucha" },
+
+  // --- ANIMAUX ---
   { theme:"Animaux", difficulty:"facile", civil:"Chien", undercover:"Chat" },
+  { theme:"Animaux", difficulty:"facile", civil:"Lion", undercover:"Tigre" },
+  { theme:"Animaux", difficulty:"facile", civil:"Cheval", undercover:"Âne" },
+  { theme:"Animaux", difficulty:"facile", civil:"Vache", undercover:"Chèvre" },
+  { theme:"Animaux", difficulty:"moyen", civil:"Aigle", undercover:"Faucon" },
+  { theme:"Animaux", difficulty:"moyen", civil:"Dauphin", undercover:"Requin" },
+  { theme:"Animaux", difficulty:"moyen", civil:"Abeille", undercover:"Guêpe" },
+  { theme:"Animaux", difficulty:"moyen", civil:"Loup", undercover:"Renard" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Corbeau", undercover:"Corneille" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Alpaga", undercover:"Lama" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Crapaud", undercover:"Grenouille" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Chameau", undercover:"Dromadaire" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Poulpe", undercover:"Calmar" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Pingouin", undercover:"Manchot" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Chouette", undercover:"Hibou" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Alligator", undercover:"Crocodile" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Léopard", undercover:"Guépard" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Mouette", undercover:"Goéland" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Lièvre", undercover:"Lapin" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Orignal", undercover:"Wapiti" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Morses", undercover:"Caribou" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Otarie", undercover:"Phoque" },
+
+  // --- SPORT ---
   { theme:"Sport", difficulty:"facile", civil:"Football", undercover:"Basketball" },
-  { theme:"Objets", difficulty:"facile", civil:"Téléphone", undercover:"Ordinateur" }
+  { theme:"Sport", difficulty:"facile", civil:"Course", undercover:"Marche" },
+  { theme:"Sport", difficulty:"moyen", civil:"Tennis", undercover:"Badminton" },
+  { theme:"Sport", difficulty:"moyen", civil:"Rugby", undercover:"Football américain" },
+  { theme:"Sport", difficulty:"moyen", civil:"Ski", undercover:"Snowboard" },
+  { theme:"Sport", difficulty:"difficile", civil:"Escalade", undercover:"Alpinisme" },
+  { theme:"Sport", difficulty:"difficile", civil:"Judo", undercover:"Karaté" },
+  { theme:"Sport", difficulty:"difficile", civil:"Surf", undercover:"Planche à voile" },
+  { theme:"Sport", difficulty:"difficile", civil:"Kayak", undercover:"Canoë" },
+  { theme:"Sport", difficulty:"difficile", civil:"Marathon", undercover:"Triathlon" }
 ];
 
 var ROLE_LABEL = { civil:"Civil", undercover:"Undercover", white:"Mr. White" };
@@ -201,7 +280,6 @@ function generateRoomCode() {
     return code;
 }
 
-// --- GESTION DU RÉSEAU EN LIGNE ---
 function startHosting() {
     isHost = true;
     roomCode = generateRoomCode();
@@ -374,8 +452,11 @@ function startGame(){
     pair = pool[Math.floor(Math.random()*pool.length)];
   }
 
-  var order = shuffle(state.playerNames.map(function(_,i){return i;}));
-  var players = state.playerNames.map(function(name,idx){
+  // Évite les doublons de noms pour un tirage propre
+  var uniqueNames = Array.from(new Set(state.playerNames));
+
+  var order = shuffle(uniqueNames.map(function(_,i){return i;}));
+  var players = uniqueNames.map(function(name,idx){
     return { id:idx, name:name, role:"civil", word:pair.civil, alive:true };
   });
   order.slice(0,state.numUndercover).forEach(function(idx){ players[idx].role="undercover"; players[idx].word=pair.undercover; });
@@ -624,7 +705,7 @@ function renderSetupBody(){
 
 function renderReveal(){
   if(state.gameMode === "network") {
-    var myRole = state.players.find(function(p){ return p.name === myName; }) || state.players[0];
+    var myRole = state.players.find(function(p){ return p.name.toLowerCase() === myName.toLowerCase(); }) || state.players[0];
     var html = '<div class="panel center" style="padding:40px 18px;">';
     
     if(state.blindMode) {
@@ -659,6 +740,50 @@ function renderReveal(){
     html += '<button class="btn btn-ghost" style="margin-top:20px;" onclick="nextReveal()">Joueur suivant &#8250;</button>';
   }
   html += '</div>';
+  return html;
+}
+
+function renderClues(){
+  var order = aliveClueOrder();
+  var currentId = order[state.clueTurn];
+  var current = state.players.find(function(p){return p.id === currentId;});
+  var html = '<div class="panel center"><h2>Manche '+state.round+'</h2>';
+  html += '<p class="dim">Tour de parole de</p><p class="wordbig">'+esc(current.name)+'</p>';
+  html += '<p class="dim" style="margin-top:10px;font-size:1rem;">Donnez votre indice à l\'oral</p>';
+  html += '<button class="btn btn-primary" style="margin-top:20px;" onclick="nextClueTurn()">Indice suivant &#8250;</button></div>';
+  return html;
+}
+
+function renderVote(){
+  var alive = state.players.filter(function(p){return p.alive;});
+  var html = '<div class="panel center"><h2>Interrogatoire & Vote</h2><p class="dim" style="margin-bottom:10px;">Désignez le suspect à éliminer :</p>';
+  alive.forEach(function(p){
+    var sel = state.selectedVote === p.id;
+    html += '<button class="btn '+(sel?'btn-primary':'btn-ghost')+'" style="margin-top:8px;" onclick="selectVote('+p.id+')">'+esc(p.name)+'</button>';
+  });
+  html += '<button class="btn btn-primary" style="margin-top:15px;" '+(state.selectedVote==null?"disabled":"")+' onclick="confirmVote()">Confirmer l\'inculpation</button></div>';
+  return html;
+}
+
+function renderWhiteGuess(){
+  var html = '<div class="panel center"><h2>Mr. White démasqué</h2><p class="dim">Dernière chance : devinez le mot des civils !</p>';
+  html += '<input type="text" id="whiteGuessInput" placeholder="Votre déposition">';
+  html += '<button class="btn btn-primary" onclick="submitWhiteGuess()">Valider</button></div>';
+  return html;
+}
+
+function renderEliminationReveal(){
+  var p = state.justEliminated;
+  var html = '<div class="panel center"><h2>Résultat de l\'inculpation</h2>';
+  html += '<p class="dim">'+esc(p.name)+' était</p><div class="stamp" style="margin:15px 0;">'+ROLE_LABEL[p.role]+'</div>';
+  html += '<button class="btn btn-primary" onclick="proceedAfterElimination()">Poursuivre l\'enquête</button></div>';
+  return html;
+}
+
+function renderEnd(){
+  var label = state.winner==="civils" ? "Les Civils gagnent !" : (state.winner==="white" ? "Mr. White gagne !" : "Les Infiltrés gagnent !");
+  var html = '<div class="panel center"><h2>Fin de l\'affaire</h2><div class="stamp olive" style="margin:20px 0;">'+label+'</div>';
+  html += '<button class="btn btn-primary" onclick="newGameSamePlayers()">Nouvelle affaire</button></div>';
   return html;
 }
 
