@@ -59,13 +59,22 @@
   .dim{color:var(--dim);font-size:13px;font-family:'Courier New',monospace;}
   .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;}
   .chip{background:var(--panel-alt);border:1px dashed var(--border);padding:6px 10px;font-size:14px;font-family:'Courier New',monospace;}
+  .wordbig{font-size:28px;color:var(--ink);font-family:'Courier New',monospace;margin-top:10px;}
 </style>
 </head>
 <body>
 <div id="app"></div>
 
 <script>
-// --- VARIABLES DE GESTION RÉSEAU ---
+// --- BIBLIOTHÈQUE DE PAIRES DE MOTS DE TEST ---
+var BUILTIN_PAIRS = [
+  { theme:"Nourriture", civil:"Pizza", undercover:"Burger" },
+  { theme:"Nourriture", civil:"Chocolat", undercover:"Bonbon" },
+  { theme:"Animaux", civil:"Chien", undercover:"Chat" },
+  { theme:"Sport", civil:"Football", undercover:"Basketball" }
+];
+
+// --- VARIABLES DE GESTION RÉSEAU ET JEU ---
 var peer = null;
 var conn = null; // Connexion vers l'hôte (pour les invités)
 var connections = []; // Liste des connexions entrantes (pour l'hôte)
@@ -77,6 +86,16 @@ var gameData = {
     wordPair: null,
     screen: "setup"
 };
+
+// Fonction utilitaire pour mélanger un tableau
+function shuffle(arr){
+  var a = arr.slice();
+  for(var i=a.length-1; i>0; i--){
+    var j = Math.floor(Math.random()*(i+1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
+}
 
 // Génère un code de salon aléatoire à 4 caractères
 function generateRoomCode() {
@@ -103,7 +122,7 @@ function createRoom() {
     roomCode = generateRoomCode();
 
     if(peer) peer.destroy();
-    peer = new Peer(roomCode); // On fixe l'identifiant PeerJS avec le code du salon
+    peer = new Peer(roomCode); // Fixe l'identifiant PeerJS avec le code du salon
 
     peer.on('open', function(id) {
         gameData.players = [{ id: id, name: myName, role: "civil", word: "" }];
@@ -132,6 +151,37 @@ function broadcastState() {
     });
 }
 
+// --- LANCEMENT DE LA PARTIE PAR L'HÔTE ---
+function startMultigame() {
+    if(!isHost) return;
+
+    // 1. Choisir un mot aléatoire
+    var pair = BUILTIN_PAIRS[Math.floor(Math.random() * BUILTIN_PAIRS.length)];
+    gameData.wordPair = pair;
+
+    // 2. Assigner les rôles à tous les joueurs connectés
+    var order = shuffle(gameData.players.map(function(_, i) { return i; }));
+
+    gameData.players.forEach(function(p) {
+        p.role = "civil";
+        p.word = pair.civil;
+    });
+
+    // Mettre un undercover
+    if(order.length > 0) {
+        var undIdx = order[0];
+        gameData.players[undIdx].role = "undercover";
+        gameData.players[undIdx].word = pair.undercover;
+    }
+
+    // 3. Basculer sur l'écran de révélation pour tout le monde
+    gameData.screen = "reveal";
+
+    // 4. Synchroniser avec les invités
+    broadcastState();
+    render();
+}
+
 // --- LOGIQUE INVITÉ ---
 function joinRoomModal() {
     gameData.screen = "join_form";
@@ -152,7 +202,7 @@ function connectToRoom() {
     isHost = false;
 
     initPeer(function(id) {
-        conn = peer.connect(roomCode); // Connexion vers l'hôte en utilisant le code
+        conn = peer.connect(roomCode);
 
         conn.on('open', function() {
             conn.send({ type: "JOIN", name: myName });
@@ -195,7 +245,7 @@ function render() {
             html += '<p class="dim" style="margin-bottom:15px;">Joueurs connectés :</p>';
             var chips = gameData.players.map(function(p){ return '<div class="chip">'+p.name+'</div>'; }).join("");
             html += '<div class="chips" style="justify-content:center;">'+chips+'</div>';
-            html += '<button class="btn btn-primary" onclick="alert(\'Lancement du jeu en réseau en cours de développement !\')">Lancer la partie</button>';
+            html += '<button class="btn btn-primary" onclick="startMultigame()">Lancer la partie</button>';
             html += '</div>';
         }
     } else if(gameData.screen === "join_form") {
@@ -211,6 +261,17 @@ function render() {
         html += '<h2>Salon d\'attente</h2>';
         html += '<p class="dim">Connecté au salon <strong>'+roomCode+'</strong>.</p>';
         html += '<p class="dim" style="margin-top:15px;">En attente que l\'hôte lance la partie...</p>';
+        html += '</div>';
+    } else if(gameData.screen === "reveal") {
+        // Retrouver les informations du joueur actuel
+        var myPlayer = gameData.players.find(function(p) { return p.name === myName; });
+        var secretWord = myPlayer ? myPlayer.word : "Mot secret";
+
+        html += '<div class="panel center">';
+        html += '<h2>Ton dossier confidentiel</h2>';
+        html += '<p class="dim">Voici ton mot codé pour cette affaire :</p>';
+        html += '<div class="wordbig">'+secretWord+'</div>';
+        html += '<p class="dim" style="margin-top:20px;">Garde-le secret et prépare ton premier indice !</p>';
         html += '</div>';
     }
 
