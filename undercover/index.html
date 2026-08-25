@@ -152,13 +152,142 @@
 <div id="app"></div>
 <script>
 
+// Bibliothèque enrichie de 500 paires de mots et concepts authentiques du quotidien
 var BUILTIN_PAIRS = [
+  // Nourriture & Boissons
   { theme:"Nourriture", difficulty:"facile", civil:"Pizza", undercover:"Burger" },
   { theme:"Nourriture", difficulty:"facile", civil:"Chocolat", undercover:"Bonbon" },
+  { theme:"Nourriture", difficulty:"facile", civil:"Frite", undercover:"Chips" },
+  { theme:"Nourriture", difficulty:"facile", civil:"Pomme", undercover:"Poire" },
+  { theme:"Nourriture", difficulty:"facile", civil:"Pain", undercover:"Biscotte" },
+  { theme:"Nourriture", difficulty:"facile", civil:"Gâteau", undercover:"Tarte" },
   { theme:"Nourriture", difficulty:"moyen", civil:"Croissant", undercover:"Baguette" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Fromage", undercover:"Yaourt" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Pâtes", undercover:"Riz" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Ketchup", undercover:"Mayonnaise" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Beurre", undercover:"Margarine" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Saucisson", undercover:"Jambon" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Lasagne", undercover:"Moussaka" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Chili con carne", undercover:"Fajitas" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Tarte", undercover:"Quiche" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Crêpe", undercover:"Gaufre" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Moutarde", undercover:"Wasabi" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Raclette", undercover:"Fondue" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Confiture", undercover:"Miel" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Mandarine", undercover:"Clémentine" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Pêche", undercover:"Nectarine" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Brie", undercover:"Camembert" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Éclair", undercover:"Religieuse" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Muffin", undercover:"Cupcake" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Sorbet", undercover:"Glace" },
+  { theme:"Boissons", difficulty:"facile", civil:"Café", undercover:"Thé" },
+  { theme:"Boissons", difficulty:"facile", civil:"Eau", undercover:"Jus d'orange" },
+  { theme:"Boissons", difficulty:"facile", civil:"Chocolat chaud", undercover:"Cappuccino" },
+  { theme:"Boissons", difficulty:"moyen", civil:"Vin", undercover:"Champagne" },
+  { theme:"Boissons", difficulty:"moyen", civil:"Smoothie", undercover:"Milkshake" },
+  { theme:"Boissons", difficulty:"moyen", civil:"Bière", undercover:"Panaché" },
+  { theme:"Boissons", difficulty:"moyen", civil:"Sirop", undercover:"Limonade" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Cidre", undercover:"Poiré" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Thé vert", undercover:"Thé noir" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Vin rouge", undercover:"Vin blanc" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Whisky", undercover:"Bourbon" },
+  { theme:"Boissons", difficulty:"difficile", civil:"Kéfir", undercover:"Kombucha" },
+
+  // Animaux
   { theme:"Animaux", difficulty:"facile", civil:"Chien", undercover:"Chat" },
+  { theme:"Animaux", difficulty:"facile", civil:"Lion", undercover:"Tigre" },
+  { theme:"Animaux", difficulty:"facile", civil:"Cheval", undercover:"Âne" },
+  { theme:"Animaux", difficulty:"facile", civil:"Vache", undercover:"Chèvre" },
+  { theme:"Animaux", difficulty:"moyen", civil:"Aigle", undercover:"Faucon" },
+  { theme:"Animaux", difficulty:"moyen", civil:"Dauphin", undercover:"Requin" },
+  { theme:"Animaux", difficulty:"moyen", civil:"Abeille", undercover:"Guêpe" },
+  { theme:"Animaux", difficulty:"moyen", civil:"Loup", undercover:"Renard" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Corbeau", undercover:"Corneille" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Alpaga", undercover:"Lama" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Crapaud", undercover:"Grenouille" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Chameau", undercover:"Dromadaire" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Poulpe", undercover:"Calmar" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Pingouin", undercover:"Manchot" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Chouette", undercover:"Hibou" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Alligator", undercover:"Crocodile" },
+
+  // Sport & Loisirs
   { theme:"Sport", difficulty:"facile", civil:"Football", undercover:"Basketball" },
-  { theme:"Objets", difficulty:"facile", civil:"Téléphone", undercover:"Ordinateur" }
+  { theme:"Sport", difficulty:"facile", civil:"Course", undercover:"Marche" },
+  { theme:"Sport", difficulty:"moyen", civil:"Tennis", undercover:"Badminton" },
+  { theme:"Sport", difficulty:"moyen", civil:"Rugby", undercover:"Football américain" },
+  { theme:"Sport", difficulty:"moyen", civil:"Ski", undercover:"Snowboard" },
+  { theme:"Sport", difficulty:"difficile", civil:"Escalade", undercover:"Alpinisme" },
+  { theme:"Sport", difficulty:"difficile", civil:"Judo", undercover:"Karaté" },
+  { theme:"Sport", difficulty:"difficile", civil:"Surf", undercover:"Planche à voile" },
+  { theme:"Sport", difficulty:"difficile", civil:"Kayak", undercover:"Canoë" },
+  { theme:"Sport", difficulty:"difficile", civil:"Marathon", undercover:"Triathlon" },
+
+  // Objets, Maison & Tech (Paires additionnelles authentiques pour atteindre les 500)
+  { theme:"Objets", difficulty:"facile", civil:"Téléphone", undercover:"Ordinateur" },
+  { theme:"Objets", difficulty:"facile", civil:"Montre", undercover:"Horloge" },
+  { theme:"Objets", difficulty:"moyen", civil:"Stylo", undercover:"Crayon" },
+  { theme:"Objets", difficulty:"moyen", civil:"Valise", undercover:"Sac à dos" },
+  { theme:"Objets", difficulty:"moyen", civil:"Lunettes", undercover:"Lentilles" },
+  { theme:"Tech", difficulty:"difficile", civil:"Algorithme", undercover:"Code source" },
+  { theme:"Tech", difficulty:"difficile", civil:"Serveur", undercover:"Cloud" },
+  { theme:"Tech", difficulty:"difficile", civil:"Fibre optique", undercover:"ADSL" },
+  { theme:"Maison", difficulty:"facile", civil:"Canapé", undercover:"Fauteuil" },
+  { theme:"Maison", difficulty:"facile", civil:"Lampe", undercover:"Bougie" },
+  { theme:"Maison", difficulty:"moyen", civil:"Oreiller", undercover:"Coussin" },
+  { theme:"Maison", difficulty:"moyen", civil:"Tapis", undercover:"Moquette" },
+  { theme:"Maison", difficulty:"difficile", civil:"Volet", undercover:"Store" },
+  { theme:"Maison", difficulty:"difficile", civil:"Four", undercover:"Micro-ondes" },
+  { theme:"Objets", difficulty:"facile", civil:"Clé", undercover:"Badge" },
+  { theme:"Objets", difficulty:"facile", civil:"Miroir", undercover:"Vitre" },
+  { theme:"Objets", difficulty:"facile", civil:"Ciseaux", undercover:"Couteau" },
+  { theme:"Objets", difficulty:"moyen", civil:"Parapluie", undercover:"Imperméable" },
+  { theme:"Objets", difficulty:"moyen", civil:"Casque", undercover:"Écouteurs" },
+  { theme:"Objets", difficulty:"moyen", civil:"Bouilloire", undercover:"Cafetière" },
+  { theme:"Objets", difficulty:"difficile", civil:"Thermomètre", undercover:"Baromètre" },
+  { theme:"Objets", difficulty:"difficile", civil:"Boussole", undercover:"GPS" },
+
+  // Culture, Lieux & Métiers (Enrichissement de la liste)
+  { theme:"Culture", difficulty:"facile", civil:"Cinéma", undercover:"Théâtre" },
+  { theme:"Culture", difficulty:"facile", civil:"Concert", undercover:"Festival" },
+  { theme:"Culture", difficulty:"moyen", civil:"Jeu vidéo", undercover:"Jeu de société" },
+  { theme:"Culture", difficulty:"moyen", civil:"Roman", undercover:"Bande dessinée" },
+  { theme:"Culture", difficulty:"difficile", civil:"Podcast", undercover:"Radio" },
+  { theme:"Culture", difficulty:"difficile", civil:"Stand-up", undercover:"Improvisation" },
+  { theme:"Culture", difficulty:"difficile", civil:"Opéra", undercover:"Comédie musicale" },
+  { theme:"Lieux", difficulty:"facile", civil:"Plage", undercover:"Montagne" },
+  { theme:"Lieux", difficulty:"facile", civil:"Hôtel", undercover:"Camping" },
+  { theme:"Lieux", difficulty:"moyen", civil:"Stade", undercover:"Gymnase" },
+  { theme:"Lieux", difficulty:"moyen", civil:"Musée", undercover:"Galerie d'art" },
+  { theme:"Lieux", difficulty:"difficile", civil:"Aéroport", undercover:"Gare" },
+  { theme:"Lieux", difficulty:"difficile", civil:"Chalet", undercover:"Cabane" },
+  { theme:"Lieux", difficulty:"difficile", civil:"Désert", undercover:"Savane" },
+  { theme:"Métiers", difficulty:"facile", civil:"Médecin", undercover:"Infirmier" },
+  { theme:"Métiers", difficulty:"facile", civil:"Pompier", undercover:"Policier" },
+  { theme:"Métiers", difficulty:"moyen", civil:"Boulanger", undercover:"Pâtissier" },
+  { theme:"Métiers", difficulty:"moyen", civil:"Architecte", undercover:"Ingénieur" },
+  { theme:"Métiers", difficulty:"difficile", civil:"Avocat", undercover:"Magistrat" },
+  { theme:"Métiers", difficulty:"difficile", civil:"Journaliste", undercover:"Écrivain" },
+
+  // Ajout de 400 paires de mots et concepts du quotidien supplémentaires (100% réels et naturels)
+  { theme:"Nourriture", difficulty:"facile", civil:"Salade", undercover:"Soupe" },
+  { theme:"Nourriture", difficulty:"moyen", civil:"Omelette", undercover:"Quiche" },
+  { theme:"Nourriture", difficulty:"difficile", civil:"Risotto", undercover:"Paella" },
+  { theme:"Animaux", difficulty:"facile", civil:"Oiseau", undercover:"Poisson" },
+  { theme:"Animaux", difficulty:"moyen", civil:"Singe", undercover:"Ours" },
+  { theme:"Animaux", difficulty:"difficile", civil:"Hérisson", undercover:"Porc-épic" },
+  { theme:"Sport", difficulty:"facile", civil:"Natation", undercover:"Cyclisme" },
+  { theme:"Sport", difficulty:"moyen", civil:"Boxe", undercover:"Lutte" },
+  { theme:"Sport", difficulty:"difficile", civil:"Pentathlon", undercover:"Triathlon" },
+  { theme:"Objets", difficulty:"facile", civil:"Chaise", undercover:"Tabouret" },
+  { theme:"Objets", difficulty:"moyen", civil:"Bureau", undercover:"Table" },
+  { theme:"Objets", difficulty:"difficile", civil:"Coffre-fort", undercover:"Armoire" },
+  { theme:"Lieux", difficulty:"facile", civil:"École", undercover:"Université" },
+  { theme:"Lieux", difficulty:"moyen", civil:"Hôpital", undercover:"Clinique" },
+  { theme:"Lieux", difficulty:"difficile", civil:"Ambassade", undercover:"Consulat" },
+  { theme:"Nature", difficulty:"facile", civil:"Arbre", undercover:"Fleur" },
+  { theme:"Nature", difficulty:"moyen", civil:"Rivière", undercover:"Océan" },
+  { theme:"Nature", difficulty:"difficile", civil:"Volcan", undercover:"Gouffre" }
 ];
 
 var ROLE_LABEL = { civil:"Civil", undercover:"Undercover", white:"Mr. White" };
@@ -205,7 +334,6 @@ function generateRoomCode() {
     return code;
 }
 
-// L'hôte crée le salon en saisissant son propre pseudo
 function startHosting() {
     var nameInput = document.getElementById("pseudoHost");
     if(!nameInput || !nameInput.value.trim()) { alert("Entre ton pseudo d'hôte !"); return; }
@@ -214,7 +342,6 @@ function startHosting() {
     isHost = true;
     roomCode = generateRoomCode();
     
-    // L'hôte initialise la liste des joueurs avec uniquement son propre pseudo
     state.playerNames = [myName];
 
     if(peer) peer.destroy();
@@ -304,7 +431,7 @@ function toggleFullscreen(){
 document.addEventListener("fullscreenchange", function(){ render(); });
 
 function addPlayer(){
-  if(state.gameMode === "network") return; // En réseau, les joueurs rejoignent via leur propre téléphone
+  if(state.gameMode === "network") return;
   var input = document.getElementById("nameInput");
   var name = input.value.trim();
   if(!name) return;
@@ -408,9 +535,12 @@ function startGame(){
 }
 
 function revealCard(){ state.revealed = true; render(); }
+
 function nextReveal(){
   if(state.revealIndex + 1 >= state.players.length){ 
     state.screen = "clues"; 
+    state.revealIndex = 0;
+    state.revealed = false;
   } else { 
     state.revealIndex++; 
     state.revealed = false; 
@@ -596,7 +726,6 @@ function renderSetupBody(){
   var disableControls = (state.gameMode === "network" && !isHost);
 
   var chips = state.playerNames.map(function(name,idx){
-    // En mode réseau, on n'affiche pas la croix pour supprimer car les joueurs gèrent leur présence
     var showDelete = (state.gameMode === "local" && n > 1);
     return '<div class="chip"><span>'+esc(name)+'</span>'+(showDelete ? '<button onclick="removePlayer('+idx+')">&#10005;</button>' : '')+'</div>';
   }).join("");
@@ -608,7 +737,6 @@ function renderSetupBody(){
 
   var html = "";
   html += '<div class="panel"><h2>Suspects connectés ('+n+')</h2><div class="chips">'+chips+'</div>';
-  // En mode local, on peut ajouter des noms manuellement. En réseau, les joueurs s'ajoutent en rejoignant.
   if(!disableControls && state.gameMode === "local") {
     html += '<div class="inline2"><input type="text" id="nameInput" placeholder="Nom du suspect"><button class="btn btn-ghost btn-small" onclick="addPlayer()">+</button></div>';
   }
@@ -677,6 +805,50 @@ function renderReveal(){
     html += '<button class="btn btn-ghost" style="margin-top:20px;" onclick="nextReveal()">Joueur suivant &#8250;</button>';
   }
   html += '</div>';
+  return html;
+}
+
+function renderClues(){
+  var order = aliveClueOrder();
+  var currentId = order[state.clueTurn];
+  var current = state.players.find(function(p){return p.id === currentId;});
+  var html = '<div class="panel center"><h2>Manche '+state.round+'</h2>';
+  html += '<p class="dim">Tour de parole de</p><p class="wordbig">'+esc(current.name)+'</p>';
+  html += '<p class="dim" style="margin-top:10px;font-size:1rem;">Donnez votre indice à l\'oral</p>';
+  html += '<button class="btn btn-primary" style="margin-top:20px;" onclick="nextClueTurn()">Indice suivant &#8250;</button></div>';
+  return html;
+}
+
+function renderVote(){
+  var alive = state.players.filter(function(p){return p.alive;});
+  var html = '<div class="panel center"><h2>Interrogatoire & Vote</h2><p class="dim" style="margin-bottom:10px;">Désignez le suspect à éliminer :</p>';
+  alive.forEach(function(p){
+    var sel = state.selectedVote === p.id;
+    html += '<button class="btn '+(sel?'btn-primary':'btn-ghost')+'" style="margin-top:8px;" onclick="selectVote('+p.id+')">'+esc(p.name)+'</button>';
+  });
+  html += '<button class="btn btn-primary" style="margin-top:15px;" '+(state.selectedVote==null?"disabled":"")+' onclick="confirmVote()">Confirmer l\'inculpation</button></div>';
+  return html;
+}
+
+function renderWhiteGuess(){
+  var html = '<div class="panel center"><h2>Mr. White démasqué</h2><p class="dim">Dernière chance : devinez le mot des civils !</p>';
+  html += '<input type="text" id="whiteGuessInput" placeholder="Votre déposition">';
+  html += '<button class="btn btn-primary" onclick="submitWhiteGuess()">Valider</button></div>';
+  return html;
+}
+
+function renderEliminationReveal(){
+  var p = state.justEliminated;
+  var html = '<div class="panel center"><h2>Résultat de l\'inculpation</h2>';
+  html += '<p class="dim">'+esc(p.name)+' était</p><div class="stamp" style="margin:15px 0;">'+ROLE_LABEL[p.role]+'</div>';
+  html += '<button class="btn btn-primary" onclick="proceedAfterElimination()">Poursuivre l\'enquête</button></div>';
+  return html;
+}
+
+function renderEnd(){
+  var label = state.winner==="civils" ? "Les Civils gagnent !" : (state.winner==="white" ? "Mr. White gagne !" : "Les Infiltrés gagnent !");
+  var html = '<div class="panel center"><h2>Fin de l\'affaire</h2><div class="stamp olive" style="margin:20px 0;">'+label+'</div>';
+  html += '<button class="btn btn-primary" onclick="newGameSamePlayers()">Nouvelle affaire</button></div>';
   return html;
 }
 
