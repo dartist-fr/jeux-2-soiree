@@ -137,6 +137,7 @@
     text-transform: uppercase; transform: rotate(-2deg); text-shadow: 0 0 6px rgba(255,46,136,0.6);
   }
   .stamp.olive { border-color: var(--neon-cyan); color: var(--neon-cyan); text-shadow: 0 0 6px rgba(34,230,255,0.6); }
+  .stamp.neutral { border-color: var(--text-sub); color: var(--text-sub); }
 
   .wordbig { font-family: var(--font-display); font-size: 1.6rem; color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,225,77,0.7); margin-top: 10px; }
   .center { text-align: center; }
@@ -302,7 +303,7 @@ document.addEventListener("fullscreenchange", function(){ render(); });
 document.addEventListener("webkitfullscreenchange", function(){ render(); });
 
 function addPlayer(){
-  if(state.gameMode === "network" && !isHost) return; // Sécurité : seul l'hôte ajoute
+  if(state.gameMode === "network" && !isHost) return;
   var input = document.getElementById("nameInput");
   var name = input.value.trim();
   if(!name) return;
@@ -365,7 +366,7 @@ function themesList(){
 }
 
 function startGame(){
-  if(state.gameMode === "network" && !isHost) return; // Seul l'hôte peut lancer
+  if(state.gameMode === "network" && !isHost) return;
 
   var pair = null;
   var pool = allPairs();
@@ -448,7 +449,6 @@ function render(){
       if(isHost) {
         html += '<div class="panel center"><h2>Code du salon (Hôte)</h2><div class="codebox">'+roomCode+'</div><p class="dim">Partage ce code à tes amis.</p></div>';
       } else {
-        // Sécurité visuelle pour les invités en réseau sur l'écran de config
         html += '<div class="panel center"><h2>Salon en cours</h2><p class="dim">Seul l\'hôte peut modifier les paramètres.</p></div>';
       }
     } else {
@@ -460,7 +460,7 @@ function render(){
 
   document.getElementById("app").innerHTML = html;
   var ni = document.getElementById("nameInput");
-  if(ni){ ni.addEventListener("keydown", function(e){ if(e.key==="Enter") addPlayer(); }); }
+  if(ni){ ni.addEventListener("keydown", function(e){ if(e.key==="Enter") addPlayer(); }); ni.focus({preventScroll:true}); }
 }
 
 function renderSetupBody(){
@@ -505,7 +505,6 @@ function renderSetupBody(){
   }
   html += '</div>';
 
-  // Seul l'hôte (ou en mode local) peut cliquer pour lancer
   if(!disableControls) {
     html += '<button class="btn btn-primary" '+(canStart?"":"disabled")+' onclick="startGame()">Ouvrir l\'enquête</button>';
   } else {
@@ -517,11 +516,18 @@ function renderSetupBody(){
 function renderReveal(){
   if(state.gameMode === "network") {
     var myRole = isHost ? state.players[0] : state.players.find(function(p){ return p.name === myName; });
-    var clsNet = myRole && myRole.role==="civil" ? "stamp olive" : "stamp";
     var html = '<div class="panel center" style="padding:40px 18px;">';
-    html += '<div class="'+clsNet+'">'+(myRole ? ROLE_LABEL[myRole.role] : "Infiltré")+'</div>';
-    html += '<p class="dim" style="margin-top:20px;">Ton mot codé secret :</p>';
-    html += '<div class="wordbig">'+(myRole ? (myRole.word || "Aucun (Mr. White)") : "Mot secret")+'</div>';
+    
+    if(state.blindMode) {
+        html += '<div class="stamp neutral">IDENTITÉ SECRÈTE</div>';
+        html += '<p class="dim" style="margin-top:20px;">Ton mot codé secret :</p>';
+        html += '<div class="wordbig">'+(myRole ? (myRole.word || "Aucun (Mr. White)") : "Mot secret")+'</div>';
+    } else {
+        var clsNet = myRole && myRole.role==="civil" ? "stamp olive" : "stamp";
+        html += '<div class="'+clsNet+'">'+(myRole ? ROLE_LABEL[myRole.role] : "Infiltré")+'</div>';
+        html += '<p class="dim" style="margin-top:20px;">Ton mot codé secret :</p>';
+        html += '<div class="wordbig">'+(myRole ? (myRole.word || "Aucun (Mr. White)") : "Mot secret")+'</div>';
+    }
     html += '</div>';
     return html;
   }
@@ -533,9 +539,14 @@ function renderReveal(){
     html += '<p class="dim">Passez l\'appareil à</p><p class="wordbig" style="margin:10px 0;">'+esc(p.name)+'</p>';
     html += '<button class="btn btn-primary" style="margin-top:15px;" onclick="revealCard()">Ouvrir mon dossier</button>';
   } else {
-    var cls = p.role==="civil" ? "stamp olive" : "stamp";
-    html += '<div class="'+cls+'">'+ROLE_LABEL[p.role]+'</div>';
-    html += '<p class="dim" style="margin-top:15px;">Mot secret :</p><p class="wordbig">'+(p.word||"Aucun")+'</p>';
+    if(state.blindMode) {
+        html += '<div class="stamp neutral">IDENTITÉ SECRÈTE</div>';
+        html += '<p class="dim" style="margin-top:15px;">Mot secret :</p><p class="wordbig">'+(p.word||"Aucun")+'</p>';
+    } else {
+        var cls = p.role==="civil" ? "stamp olive" : "stamp";
+        html += '<div class="'+cls+'">'+ROLE_LABEL[p.role]+'</div>';
+        html += '<p class="dim" style="margin-top:15px;">Mot secret :</p><p class="wordbig">'+(p.word||"Aucun")+'</p>';
+    }
     html += '<button class="btn btn-ghost" style="margin-top:20px;" onclick="nextReveal()">Joueur suivant &#8250;</button>';
   }
   html += '</div>';
