@@ -877,7 +877,11 @@ function renderSetupBody(){
   html += '<label style="cursor:pointer;display:flex;align-items:center;gap:8px;margin-top:10px;margin-bottom:10px;" class="dim"><input type="checkbox" '+(state.blindMode?"checked":"")+' '+(disableControls?'disabled':'')+' onchange="toggleBlindMode()"> Mode Identité Secrète</label>';
 
   if(state.isGameMaster){
-    html += '<div class="grid2"><div><span class="dim">Mot Civils</span><input type="text" id="gmCivil" value="'+esc(state.customCivil)+'" '+(disableControls?'readonly':'')+' placeholder="ex: Soleil" oninput="state.customCivil=this.value"></div><div><span class="dim">Mot Undercovers</span><input type="text" id="gmUndercover" value="'+esc(state.customUndercover)+'" '+(disableControls?'readonly':'')+' placeholder="ex: Lune" oninput="state.customUndercover=this.value"></div></div>';
+    if(disableControls){
+      html += '<p class="dim" style="margin-top:6px;">Le Meneur d\'enquête choisit les deux mots en privé, ils resteront cachés pour tout le monde ici.</p>';
+    } else {
+      html += '<div class="grid2"><div><span class="dim">Mot Civils</span><input type="text" id="gmCivil" value="'+esc(state.customCivil)+'" placeholder="ex: Soleil" oninput="state.customCivil=this.value"></div><div><span class="dim">Mot Undercovers</span><input type="text" id="gmUndercover" value="'+esc(state.customUndercover)+'" placeholder="ex: Lune" oninput="state.customUndercover=this.value"></div></div>';
+    }
   } else {
     html += '<div class="grid2"><div><span class="dim">Dossier</span><select id="themeSel" '+(disableControls?'disabled':'')+' onchange="setTheme(this.value)">'+themeOpts+'</select></div><div><span class="dim">Niveau</span><select id="diffSel" '+(disableControls?'disabled':'')+' onchange="setDifficulty(this.value)">'+diffOpts+'</select></div></div>';
   }
@@ -947,25 +951,43 @@ function renderClues(){
   var html = '<div class="panel center"><h2>Manche '+state.round+'</h2>';
   html += '<p class="dim">Tour de parole de</p><p class="wordbig">'+esc(current.name)+'</p>';
   html += '<p class="dim" style="margin-top:10px;font-size:1rem;">Donnez votre indice à l\'oral</p>';
-  html += '<button class="btn btn-primary" style="margin-top:20px;" onclick="nextClueTurn()">Indice suivant &#8250;</button></div>';
+  if(isGameHost()){
+    html += '<button class="btn btn-primary" style="margin-top:20px;" onclick="nextClueTurn()">Indice suivant &#8250;</button>';
+  } else {
+    html += '<p class="dim" style="margin-top:20px;font-size:1rem;">Observez l\'écran de l\'hôte pour suivre le tour de jeu.</p>';
+  }
+  html += '</div>';
   return html;
 }
 
 function renderVote(){
   var alive = state.players.filter(function(p){return p.alive;});
-  var html = '<div class="panel center"><h2>Interrogatoire & Vote</h2><p class="dim" style="margin-bottom:10px;">Désignez le suspect à éliminer :</p>';
-  alive.forEach(function(p){
-    var sel = state.selectedVote === p.id;
-    html += '<button class="btn '+(sel?'btn-primary':'btn-ghost')+'" style="margin-top:8px;" onclick="selectVote('+p.id+')">'+esc(p.name)+'</button>';
-  });
-  html += '<button class="btn btn-primary" style="margin-top:15px;" '+(state.selectedVote==null?"disabled":"")+' onclick="confirmVote()">Confirmer l\'inculpation</button></div>';
+  var html = '<div class="panel center"><h2>Interrogatoire & Vote</h2>';
+  if(isGameHost()){
+    html += '<p class="dim" style="margin-bottom:10px;">Désignez le suspect à éliminer :</p>';
+    alive.forEach(function(p){
+      var sel = state.selectedVote === p.id;
+      html += '<button class="btn '+(sel?'btn-primary':'btn-ghost')+'" style="margin-top:8px;" onclick="selectVote('+p.id+')">'+esc(p.name)+'</button>';
+    });
+    html += '<button class="btn btn-primary" style="margin-top:15px;" '+(state.selectedVote==null?"disabled":"")+' onclick="confirmVote()">Confirmer l\'inculpation</button>';
+  } else {
+    html += '<p class="dim">Discutez à l\'oral et désignez un suspect ensemble.</p>';
+    html += '<p class="dim" style="margin-top:10px;font-size:1rem;">L\'hôte enregistre la décision du groupe.</p>';
+  }
+  html += '</div>';
   return html;
 }
 
 function renderWhiteGuess(){
-  var html = '<div class="panel center"><h2>Mr. White démasqué</h2><p class="dim">Dernière chance : devinez le mot des civils !</p>';
-  html += '<input type="text" id="whiteGuessInput" placeholder="Votre déposition">';
-  html += '<button class="btn btn-primary" onclick="submitWhiteGuess()">Valider</button></div>';
+  var html = '<div class="panel center"><h2>Mr. White démasqué</h2>';
+  if(isGameHost()){
+    html += '<p class="dim">Dernière chance : devinez le mot des civils !</p>';
+    html += '<input type="text" id="whiteGuessInput" placeholder="Votre déposition">';
+    html += '<button class="btn btn-primary" onclick="submitWhiteGuess()">Valider</button>';
+  } else {
+    html += '<p class="dim">Mr. White tente de deviner le mot des civils à l\'oral...</p>';
+  }
+  html += '</div>';
   return html;
 }
 
@@ -973,7 +995,12 @@ function renderEliminationReveal(){
   var p = state.justEliminated;
   var html = '<div class="panel center"><h2>Résultat de l\'inculpation</h2>';
   html += '<p class="dim">'+esc(p.name)+' était</p><div class="stamp" style="margin:15px 0;">'+ROLE_LABEL[p.role]+'</div>';
-  html += '<button class="btn btn-primary" onclick="proceedAfterElimination()">Poursuivre l\'enquête</button></div>';
+  if(isGameHost()){
+    html += '<button class="btn btn-primary" onclick="proceedAfterElimination()">Poursuivre l\'enquête</button>';
+  } else {
+    html += '<p class="dim" style="margin-top:10px;">En attente que l\'hôte poursuive l\'enquête...</p>';
+  }
+  html += '</div>';
   return html;
 }
 
