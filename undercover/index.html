@@ -6,10 +6,11 @@
 <meta name="theme-color" content="#0b0616">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Undercover — Salle d'Arcade Edition</title>
+<title>Undercover • jeux2soiree</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<!-- Inclusion de PeerJS pour gérer la connexion en ligne entre téléphones -->
 <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 <style>
   :root {
@@ -200,6 +201,7 @@ function generateRoomCode() {
     return code;
 }
 
+// --- GESTION DU RÉSEAU EN LIGNE ---
 function startHosting() {
     isHost = true;
     roomCode = generateRoomCode();
@@ -395,8 +397,6 @@ function startGame(){
 }
 
 function revealCard(){ state.revealed = true; render(); }
-
-// CORRECTION DE LA TRANSITION VERS LES INDICES
 function nextReveal(){
   if(state.revealIndex + 1 >= state.players.length){ 
     state.screen = "clues"; 
@@ -659,50 +659,6 @@ function renderReveal(){
     html += '<button class="btn btn-ghost" style="margin-top:20px;" onclick="nextReveal()">Joueur suivant &#8250;</button>';
   }
   html += '</div>';
-  return html;
-}
-
-function renderClues(){
-  var order = aliveClueOrder();
-  var currentId = order[state.clueTurn];
-  var current = state.players.find(function(p){return p.id === currentId;});
-  var html = '<div class="panel center"><h2>Manche '+state.round+'</h2>';
-  html += '<p class="dim">Tour de parole de</p><p class="wordbig">'+esc(current.name)+'</p>';
-  html += '<p class="dim" style="margin-top:10px;font-size:1rem;">Donnez votre indice à l\'oral</p>';
-  html += '<button class="btn btn-primary" style="margin-top:20px;" onclick="nextClueTurn()">Indice suivant &#8250;</button></div>';
-  return html;
-}
-
-function renderVote(){
-  var alive = state.players.filter(function(p){return p.alive;});
-  var html = '<div class="panel center"><h2>Interrogatoire & Vote</h2><p class="dim" style="margin-bottom:10px;">Désignez le suspect à éliminer :</p>';
-  alive.forEach(function(p){
-    var sel = state.selectedVote === p.id;
-    html += '<button class="btn '+(sel?'btn-primary':'btn-ghost')+'" style="margin-top:8px;" onclick="selectVote('+p.id+')">'+esc(p.name)+'</button>';
-  });
-  html += '<button class="btn btn-primary" style="margin-top:15px;" '+(state.selectedVote==null?"disabled":"")+' onclick="confirmVote()">Confirmer l\'inculpation</button></div>';
-  return html;
-}
-
-function renderWhiteGuess(){
-  var html = '<div class="panel center"><h2>Mr. White démasqué</h2><p class="dim">Dernière chance : devinez le mot des civils !</p>';
-  html += '<input type="text" id="whiteGuessInput" placeholder="Votre déposition">';
-  html += '<button class="btn btn-primary" onclick="submitWhiteGuess()">Valider</button></div>';
-  return html;
-}
-
-function renderEliminationReveal(){
-  var p = state.justEliminated;
-  var html = '<div class="panel center"><h2>Résultat de l\'inculpation</h2>';
-  html += '<p class="dim">'+esc(p.name)+' était</p><div class="stamp" style="margin:15px 0;">'+ROLE_LABEL[p.role]+'</div>';
-  html += '<button class="btn btn-primary" onclick="proceedAfterElimination()">Poursuivre l\'enquête</button></div>';
-  return html;
-}
-
-function renderEnd(){
-  var label = state.winner==="civils" ? "Les Civils gagnent !" : (state.winner==="white" ? "Mr. White gagne !" : "Les Infiltrés gagnent !");
-  var html = '<div class="panel center"><h2>Fin de l\'affaire</h2><div class="stamp olive" style="margin:20px 0;">'+label+'</div>';
-  html += '<button class="btn btn-primary" onclick="newGameSamePlayers()">Nouvelle affaire</button></div>';
   return html;
 }
 
