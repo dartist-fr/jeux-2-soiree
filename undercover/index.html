@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#0b0616">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Undercover • jeux2soiree</title>
+<title>Undercover — Salle d'Arcade Edition</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -152,9 +152,8 @@
 <div id="app"></div>
 <script>
 
-// Intégration exacte des 208 paires de mots et catégories d'origine
 var BUILTIN_PAIRS = [
-  // --- NOURRITURE ---
+  // --- NOURRITURE (40) ---
   { theme:"Nourriture", difficulty:"facile", civil:"Pizza", undercover:"Burger" },
   { theme:"Nourriture", difficulty:"facile", civil:"Chocolat", undercover:"Bonbon" },
   { theme:"Nourriture", difficulty:"facile", civil:"Frite", undercover:"Chips" },
@@ -189,7 +188,7 @@ var BUILTIN_PAIRS = [
   { theme:"Nourriture", difficulty:"difficile", civil:"Ail", undercover:"Oignon" },
   { theme:"Nourriture", difficulty:"difficile", civil:"Sucre", undercover:"Édulcorant" },
 
-  // --- BOISSONS ---
+  // --- BOISSONS (18) ---
   { theme:"Boissons", difficulty:"facile", civil:"Café", undercover:"Thé" },
   { theme:"Boissons", difficulty:"facile", civil:"Eau", undercover:"Jus d'orange" },
   { theme:"Boissons", difficulty:"facile", civil:"Chocolat chaud", undercover:"Cappuccino" },
@@ -205,7 +204,7 @@ var BUILTIN_PAIRS = [
   { theme:"Boissons", difficulty:"difficile", civil:"Tisane", undercover:"Infusion" },
   { theme:"Boissons", difficulty:"difficile", civil:"Kéfir", undercover:"Kombucha" },
 
-  // --- ANIMAUX ---
+  // --- ANIMAUX (30) ---
   { theme:"Animaux", difficulty:"facile", civil:"Chien", undercover:"Chat" },
   { theme:"Animaux", difficulty:"facile", civil:"Lion", undercover:"Tigre" },
   { theme:"Animaux", difficulty:"facile", civil:"Cheval", undercover:"Âne" },
@@ -229,7 +228,7 @@ var BUILTIN_PAIRS = [
   { theme:"Animaux", difficulty:"difficile", civil:"Morses", undercover:"Caribou" },
   { theme:"Animaux", difficulty:"difficile", civil:"Otarie", undercover:"Phoque" },
 
-  // --- ANATOMIE & CORPS ---
+  // --- ANATOMIE & CORPS (Nouveau - 10) ---
   { theme:"Anatomie", difficulty:"moyen", civil:"Cœur", undercover:"Poumon" },
   { theme:"Anatomie", difficulty:"moyen", civil:"Œil", undercover:"Oreille" },
   { theme:"Anatomie", difficulty:"difficile", civil:"Artère", undercover:"Veine" },
@@ -241,7 +240,7 @@ var BUILTIN_PAIRS = [
   { theme:"Anatomie", difficulty:"difficile", civil:"Crâne", undercover:"Cerveau" },
   { theme:"Anatomie", difficulty:"difficile", civil:"Molaire", undercover:"Incisive" },
 
-  // --- NATURE & CLIMAT ---
+  // --- NATURE & CLIMAT (Nouveau - 15) ---
   { theme:"Nature", difficulty:"facile", civil:"Pluie", undercover:"Neige" },
   { theme:"Nature", difficulty:"moyen", civil:"Rivière", undercover:"Lac" },
   { theme:"Nature", difficulty:"moyen", civil:"Étoile", undercover:"Planète" },
@@ -258,7 +257,7 @@ var BUILTIN_PAIRS = [
   { theme:"Nature", difficulty:"difficile", civil:"Avalanche", undercover:"Blizzard" },
   { theme:"Nature", difficulty:"difficile", civil:"Baie", undercover:"Golfe" },
 
-  // --- SPORT ---
+  // --- SPORT (20) ---
   { theme:"Sport", difficulty:"facile", civil:"Football", undercover:"Basketball" },
   { theme:"Sport", difficulty:"facile", civil:"Course", undercover:"Marche" },
   { theme:"Sport", difficulty:"moyen", civil:"Tennis", undercover:"Badminton" },
@@ -274,7 +273,7 @@ var BUILTIN_PAIRS = [
   { theme:"Sport", difficulty:"difficile", civil:"Haltérophilie", undercover:"Musculation" },
   { theme:"Sport", difficulty:"difficile", civil:"Biathlon", undercover:"Décathlon" },
 
-  // --- OBJETS & MAISON ---
+  // --- OBJETS & MAISON (30) ---
   { theme:"Objets", difficulty:"facile", civil:"Téléphone", undercover:"Ordinateur" },
   { theme:"Objets", difficulty:"facile", civil:"Montre", undercover:"Horloge" },
   { theme:"Objets", difficulty:"moyen", civil:"Stylo", undercover:"Crayon" },
@@ -296,7 +295,7 @@ var BUILTIN_PAIRS = [
   { theme:"Objets", difficulty:"difficile", civil:"Micro-ondes", undercover:"Four" },
   { theme:"Objets", difficulty:"difficile", civil:"Oreiller", undercover:"Traversin" },
 
-  // --- LIEUX & GÉOGRAPHIE ---
+  // --- LIEUX & GÉOGRAPHIE (18) ---
   { theme:"Lieux", difficulty:"facile", civil:"Plage", undercover:"Montagne" },
   { theme:"Lieux", difficulty:"facile", civil:"Hôtel", undercover:"Camping" },
   { theme:"Lieux", difficulty:"moyen", civil:"Stade", undercover:"Gymnase" },
@@ -310,7 +309,7 @@ var BUILTIN_PAIRS = [
   { theme:"Lieux", difficulty:"difficile", civil:"Continent", undercover:"Péninsule" },
   { theme:"Lieux", difficulty:"difficile", civil:"Détroit", undercover:"Isthme" },
 
-  // --- TRANSPORT ---
+  // --- TRANSPORT (16) ---
   { theme:"Transport", difficulty:"facile", civil:"Voiture", undercover:"Vélo" },
   { theme:"Transport", difficulty:"facile", civil:"Avion", undercover:"Train" },
   { theme:"Transport", difficulty:"moyen", civil:"Trottinette", undercover:"Skateboard" },
@@ -323,7 +322,7 @@ var BUILTIN_PAIRS = [
   { theme:"Transport", difficulty:"difficile", civil:"Ferry", undercover:"Croisière" },
   { theme:"Transport", difficulty:"difficile", civil:"Tramway", undercover:"Trolleybus" },
 
-  // --- DIVERTISSEMENT, JEUX & CULTURE ---
+  // --- DIVERTISSEMENT, JEUX & CULTURE (30) ---
   { theme:"Divertissement", difficulty:"facile", civil:"Cinéma", undercover:"Théâtre" },
   { theme:"Divertissement", difficulty:"facile", civil:"Concert", undercover:"Festival" },
   { theme:"Divertissement", difficulty:"moyen", civil:"Jeu vidéo", undercover:"Jeu de société" },
@@ -342,7 +341,7 @@ var BUILTIN_PAIRS = [
   { theme:"Jeux", difficulty:"difficile", civil:"Croupier", undercover:"Maître du jeu" },
   { theme:"Jeux", difficulty:"difficile", civil:"Plateau", undercover:"Tuiles" },
 
-  // --- CONCEPTS & ABSTRAITS ---
+  // --- CONCEPTS & ABSTRAITS (Nouveau - 15) ---
   { theme:"Concepts", difficulty:"moyen", civil:"Joie", undercover:"Bonheur" },
   { theme:"Concepts", difficulty:"moyen", civil:"Rire", undercover:"Sourire" },
   { theme:"Concepts", difficulty:"difficile", civil:"Éthique", undercover:"Morale" },
@@ -357,7 +356,7 @@ var BUILTIN_PAIRS = [
   { theme:"Concepts", difficulty:"difficile", civil:"Hasard", undercover:"Destin" },
   { theme:"Concepts", difficulty:"difficile", civil:"Talent", undercover:"Génie" },
 
-  // --- TECHNOLOGIE AVANCÉE ---
+  // --- TECHNOLOGIE AVANCÉE (10) ---
   { theme:"Technologie", difficulty:"difficile", civil:"Focale", undercover:"Ouverture" },
   { theme:"Technologie", difficulty:"difficile", civil:"Obturateur", undercover:"Diaphragme" },
   { theme:"Technologie", difficulty:"difficile", civil:"Retouche AI", undercover:"Montage" },
@@ -367,7 +366,7 @@ var BUILTIN_PAIRS = [
   { theme:"Technologie", difficulty:"difficile", civil:"Serveur", undercover:"Cloud" },
   { theme:"Technologie", difficulty:"difficile", civil:"Algorithme", undercover:"Code source" },
 
-  // --- VÊTEMENTS & MODE ---
+  // --- VÊTEMENTS & MODE (12) ---
   { theme:"Vêtements", difficulty:"facile", civil:"Pantalon", undercover:"Short" },
   { theme:"Vêtements", difficulty:"moyen", civil:"Chaussures", undercover:"Baskets" },
   { theme:"Vêtements", difficulty:"difficile", civil:"Bonnet", undercover:"Casquette" },
@@ -380,7 +379,7 @@ var BUILTIN_PAIRS = [
   { theme:"Vêtements", difficulty:"difficile", civil:"Chaussettes", undercover:"Mi-bas" },
   { theme:"Vêtements", difficulty:"difficile", civil:"Écharpe", undercover:"Foulard" },
 
-  // --- ESPIONNAGE & ENQUÊTE ---
+  // --- ESPIONNAGE & ENQUÊTE (10) ---
   { theme:"Espionnage", difficulty:"facile", civil:"Espion", undercover:"Détective" },
   { theme:"Espionnage", difficulty:"moyen", civil:"Empreinte", undercover:"ADN" },
   { theme:"Espionnage", difficulty:"moyen", civil:"Menottes", undercover:"Corde" },
@@ -955,8 +954,15 @@ function renderEliminationReveal(){
 function renderEnd(){
   var label = state.winner==="civils" ? "Les Civils gagnent !" : (state.winner==="white" ? "Mr. White gagne !" : "Les Infiltrés gagnent !");
   var html = '<div class="panel center"><h2>Fin de l\'affaire</h2><div class="stamp olive" style="margin:20px 0;">'+label+'</div>';
-  html += '<button class="btn btn-primary" onclick="newGameSamePlayers()">Recommencer une partie</button>';
-  html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="returnToLobby()">Retour au salon (Garder le groupe)</button>';
+  
+  // Sécurité pour l'affichage de fin de partie en réseau pour l'hôte vs invités
+  if(state.gameMode === "network" && !isHost) {
+      html += '<p class="dim" style="margin-top:15px;">En attente que l\'hôte relance une partie...</p>';
+  } else {
+      html += '<button class="btn btn-primary" onclick="newGameSamePlayers()">Recommencer une partie</button>';
+      html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="returnToLobby()">Retour au salon (Garder le groupe)</button>';
+  }
+  
   html += '</div>';
   return html;
 }
