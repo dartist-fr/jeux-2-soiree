@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0a0713">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Loup-Garou — Salle d'Arcade (Mode MJ Centralisé)</title>
+    <title>Loup-Garou — Salle d'Arcade (Mode MJ Centralisé & Narrateur)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -208,6 +208,7 @@
 
     var state = {
         gameMode: null, // "local" ou "network"
+        mjMode: "auto", // "auto" (MJ joue) ou "narrator" (MJ ne joue pas et voit tout)
         screen: "mode_select",
         players: ["Joueur 1", "Joueur 2", "Joueur 3", "Joueur 4", "Joueur 5", "Joueur 6"],
         roleCounts: {
@@ -227,7 +228,7 @@
         hunterPending: null,
         dayDeaths: [],
         selectedTarget: null,
-        wolfVotes: {}, // Stocke les votes de chaque loup connecté
+        wolfVotes: {},
         firstDayVotePassed: false,
         winner: null
     };
@@ -238,7 +239,7 @@
             state.screen = "setup";
             render();
         } else {
-            state.screen = "net_host_or_join";
+            state.screen = "net_host_options";
             render();
         }
     }
@@ -250,14 +251,20 @@
         return code;
     }
 
-    function startHosting() {
+    function startHosting(mjType) {
         var nameInput = document.getElementById("pseudoHost");
         if(!nameInput || !nameInput.value.trim()) { alert("Entre ton pseudo d'hôte !"); return; }
         
         myName = nameInput.value.trim();
         isHost = true;
         roomCode = generateRoomCode();
-        state.players = [myName]; // L'hôte est le MJ principal
+        state.mjMode = mjType; // "auto" ou "narrator"
+
+        if (state.mjMode === "narrator") {
+            state.players = []; // Le MJ ne participe pas à la distribution des rôles
+        } else {
+            state.players = [myName]; // Le MJ participe
+        }
 
         if(peer) peer.destroy();
         peer = new Peer(roomCode);
@@ -276,10 +283,6 @@
                     }
                     broadcastState();
                     render();
-                } else if(data.type === "WOLF_VOTE") {
-                    // Enregistre le vote d'un loup
-                    state.wolfVotes[data.playerId] = data.targetId;
-                    checkWolvesConsensus();
                 }
             });
         });
@@ -452,34 +455,6 @@
         }
     }
 
-    function checkWolvesConsensus() {
-        const aliveWolves = state.gamePlayers.filter(p => (p.role === "loup" || p.role === "infect" || p.role === "loup_blanc" || p.isInfected) && p.alive);
-        const votes = Object.values(state.wolfVotes);
-
-        // Si tous les loups ont voté
-        if (votes.length >= aliveWolves.length && aliveWolves.length > 0) {
-            // Compter les votes
-            let counts = {};
-            votes.forEach(targetId => { counts[targetId] = (counts[targetId] || 0) + 1; });
-            
-            let maxVotes = 0;
-            let candidates = [];
-            for (let [targetId, count] of Object.entries(counts)) {
-                if (count > maxVotes) {
-                    maxVotes = count;
-                    candidates = [parseInt(targetId)];
-                } else if (count === maxVotes) {
-                    candidates.push(parseInt(targetId));
-                }
-            }
-
-            // En cas d'égalité, choix aléatoire parmi les ex-aequo
-            let chosenTarget = candidates[Math.floor(Math.random() * candidates.length)];
-            state.nightActions.wolfVictim = chosenTarget;
-            nextNightStep();
-        }
-    }
-
     function resolveNight() {
         let deaths = [];
         const wolfVictimId = state.nightActions.wolfVictim;
@@ -605,12 +580,14 @@
             html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="selectMode(\'network\')">🌐 Réseau (Le MJ pilote tout)</button>';
             html += '</div>';
         }
-        else if (state.screen === "net_host_or_join") {
+        else if (state.screen === "net_host_options") {
             html += '<button class="linkbtn" onclick="state.screen=\'mode_select\'; render();">&#8249; Retour</button>';
-            html += '<div class="panel center"><h2>Mode Réseau</h2>';
-            html += '<p class="dim" style="margin-bottom:10px;">Entre ton pseudo pour créer le salon MJ :</p>';
+            html += '<div class="panel center"><h2>Créer un salon</h2>';
+            html += '<p class="dim" style="margin-bottom:10px;">Entre ton pseudo :</p>';
             html += '<input type="text" id="pseudoHost" placeholder="Ton pseudo">';
-            html += '<button class="btn btn-primary" onclick="startHosting()">Créer le salon (Devenir le MJ)</button>';
+            html += '<h2 style="margin-top:20px;">Mode du Maître du Jeu (MJ)</h2>';
+            html += '<button class="btn btn-primary" onclick="startHosting(\'auto\')">1. Le MJ joue (Participant)</button>';
+            html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="startHosting(\'narrator\')">2. Le MJ ne joue pas (Narrateur pur / Voit tout)</button>';
             html += '<button class="btn btn-ghost" style="margin-top:15px;" onclick="joinRoomForm()">Rejoindre un salon existant ›</button></div>';
         }
         else if (state.screen === "join_form") {
@@ -618,7 +595,7 @@
             html += '<input type="text" id="pseudoJoin" placeholder="Ton pseudo">';
             html += '<input type="text" id="roomCodeInput" placeholder="Code du salon (4 lettres)" style="text-transform:uppercase;">';
             html += '<button class="btn btn-primary" onclick="connectToRoom()">Se connecter</button>';
-            html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="state.screen=\'net_host_or_join\'; render();">Retour</button></div>';
+            html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="state.screen=\'mode_select\'; render();">Retour</button></div>';
         }
         else if (state.screen === "waiting_room") {
             html += '<div class="panel center"><h2>Salon d\'attente</h2>';
@@ -627,7 +604,7 @@
         }
         else if (state.screen === "setup") {
             if(state.gameMode === "network" && isHost) {
-                html += '<div class="panel center"><h2>Code du salon : <span style="color:var(--moon)">'+roomCode+'</span></h2><p class="dim">Les joueurs connectés voient uniquement leur rôle secret. Tu gères tout d\'ici.</p></div>';
+                html += '<div class="panel center"><h2>Code du salon : <span style="color:var(--moon)">'+roomCode+'</span></h2><p class="dim">Mode : <strong>'+(state.mjMode==='auto' ? 'MJ Joueur' : 'MJ Narrateur (Voit tout)')+'</strong></p></div>';
             }
             html += renderSetup();
         }
@@ -642,7 +619,7 @@
         var ni = document.getElementById("playerNameInput");
         if(ni){ ni.addEventListener("keydown", function(e){ if(e.key==="Enter") addPlayer(); }); }
         var ph = document.getElementById("pseudoHost");
-        if(ph){ ph.addEventListener("keydown", function(e){ if(e.key==="Enter") startHosting(); }); }
+        if(ph){ ph.addEventListener("keydown", function(e){ if(e.key==="Enter") startHosting('auto'); }); }
         var pj = document.getElementById("pseudoJoin");
         if(pj){ pj.addEventListener("keydown", function(e){ if(e.key==="Enter") connectToRoom(); }); }
     }
@@ -687,7 +664,6 @@
             html += `<button class="btn btn-primary" onclick="startDistribution()">Lancer la partie ›</button>`;
         } else {
             html += `<p class="center dim" style="margin-top:15px;">Le MJ prépare la distribution des rôles sur son écran...</p>`;
-            // Si le client est connecté, afficher son rôle secret s'il est attribué
             if(state.gamePlayers && state.gamePlayers.length > 0) {
                 const myRoleObj = state.gamePlayers.find(p => p.name.toLowerCase() === myName.toLowerCase());
                 if(myRoleObj) {
@@ -711,7 +687,11 @@
         const alivePlayers = state.gamePlayers.filter(p => p.alive);
         const disableActions = (state.gameMode === "network" && !isHost);
 
-        // Si on est un simple joueur connecté (pas le MJ), on voit uniquement l'écran "Fermez les yeux"
+        // Si le MJ a choisi le mode "Narrateur" et qu'on est au début, afficher le tableau secret sur l'écran du MJ
+        if (isHost && state.mjMode === "narrator" && state.nightNumber === 1 && state.nightStep === 0 && !state.narratorViewShown) {
+            state.narratorViewShown = true;
+        }
+
         if (disableActions) {
             return `
                 <h1>🌙 Nuit ${state.nightNumber}</h1>
@@ -719,6 +699,17 @@
                     <div style="font-size: 3rem; margin-bottom: 15px;">💤</div>
                     <h2>Le village dort...</h2>
                     <p class="dim" style="margin-top: 10px;">Fermez les yeux. Le Maître du Jeu gère les tours sur son écran.</p>
+                </div>
+            `;
+        }
+
+        // Si le MJ est en mode Narrateur, afficher un rappel de qui a quel rôle en haut du panneau
+        let narratorHeader = "";
+        if (isHost && state.mjMode === "narrator") {
+            narratorHeader = `
+                <div style="background: rgba(168,85,247,0.15); border:1px solid var(--accent); padding:10px; margin-bottom:15px; font-size:0.95rem;">
+                    <strong>📋 Rappel Rôles Secrets :</strong><br>
+                    ${state.gamePlayers.map(gp => `${gp.name}: ${ROLES_DEF[gp.role].icon} ${ROLES_DEF[gp.role].name}`).join(" | ")}
                 </div>
             `;
         }
@@ -905,6 +896,7 @@
 
         return `
             <h1>🌙 Nuit ${state.nightNumber} (MJ)</h1>
+            ${narratorHeader}
             <div class="panel">${contentHtml}</div>
         `;
     }
