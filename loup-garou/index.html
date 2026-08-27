@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0a0713">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Loup-Garou — Salle d'Arcade (Mode MJ Centralisé & Narrateur)</title>
+    <title>Loup-Garou — Salle d'Arcade (Multijoueur Corrigé)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -183,7 +183,7 @@
 <div id="app"></div>
 <script>
     const ROLES_DEF = {
-        loup: { name: "Loup-Garou", team: "loups", icon: "🐺", desc: "Dévore un villageois chaque nuit." },
+        loup: { name: "Loup-Garou", team: "loups", icon: "🐺", desc: "Dévore un villageois chaque nuit avec la meute." },
         infect: { name: "Infect Père des Loups", team: "loups", icon: "🩸", desc: "Loup pouvant infecter sa victime." },
         loup_blanc: { name: "Loup Blanc", team: "solo", icon: "🐺⚪", desc: "Peut éliminer un loup une nuit sur deux." },
         corbeau: { name: "Le Corbeau", team: "village", icon: "🐦‍⬛", desc: "Ajoute 1 voix de pénalité à un joueur chaque nuit." },
@@ -207,8 +207,7 @@
     var roomCode = "";
 
     var state = {
-        gameMode: null, // "local" ou "network"
-        mjMode: "auto", // "auto" (MJ joue) ou "narrator" (MJ ne joue pas et voit tout)
+        gameMode: null,
         screen: "mode_select",
         players: ["Joueur 1", "Joueur 2", "Joueur 3", "Joueur 4", "Joueur 5", "Joueur 6"],
         roleCounts: {
@@ -228,7 +227,10 @@
         hunterPending: null,
         dayDeaths: [],
         selectedTarget: null,
+        voyanteRevealedTargetId: null,
         wolfVotes: {},
+        villageVotes: {},
+        tieMessage: "",
         firstDayVotePassed: false,
         winner: null
     };
@@ -239,7 +241,7 @@
             state.screen = "setup";
             render();
         } else {
-            state.screen = "net_host_options";
+            state.screen = "net_host_or_join";
             render();
         }
     }
@@ -251,20 +253,14 @@
         return code;
     }
 
-    function startHosting(mjType) {
+    function startHosting() {
         var nameInput = document.getElementById("pseudoHost");
         if(!nameInput || !nameInput.value.trim()) { alert("Entre ton pseudo d'hôte !"); return; }
         
         myName = nameInput.value.trim();
         isHost = true;
         roomCode = generateRoomCode();
-        state.mjMode = mjType; // "auto" ou "narrator"
-
-        if (state.mjMode === "narrator") {
-            state.players = []; // Le MJ ne participe pas à la distribution des rôles
-        } else {
-            state.players = [myName]; // Le MJ participe
-        }
+        state.players = [myName];
 
         if(peer) peer.destroy();
         peer = new Peer(roomCode);
@@ -283,6 +279,14 @@
                     }
                     broadcastState();
                     render();
+                } else if(data.type === "WOLF_VOTE") {
+                    state.wolfVotes[data.playerId] = data.targetId;
+                    checkWolvesConsensus();
+                    broadcastState();
+                } else if(data.type === "VILLAGE_VOTE") {
+                    state.villageVotes[data.playerId] = data.targetId;
+                    checkVillageConsensus();
+                    broadcastState();
                 }
             });
         });
@@ -405,6 +409,8 @@
             isInfected: false
         }));
 
+        state.revealIndex = 0;
+        state.revealed = false;
         state.nightNumber = 1;
         state.nightStep = 0;
         state.witchPotions = { heal: true, death: true };
@@ -413,8 +419,11 @@
         state.corbeauTargetId = null;
         state.charmedPlayerIds = [];
         state.wolfVotes = {};
+        state.villageVotes = {};
+        state.tieMessage = "";
+        state.voyanteRevealedTargetId = null;
         state.firstDayVotePassed = false;
-        state.screen = "night";
+        state.screen = (state.gameMode === "local") ? "reveal" : "reveal_net";
         
         if(state.gameMode === "network") broadcastState();
         render();
@@ -446,11 +455,103 @@
         state.nightStep++;
         state.selectedTarget = null;
         state.wolfVotes = {};
+        state.voyanteRevealedTargetId = null;
 
         if (state.nightStep >= steps.length) {
             resolveNight();
         } else {
             if(state.gameMode === "network") broadcastState();
+            render();
+        }
+    }
+
+    function checkWolvesConsensus() {
+        const aliveWolves = state.gamePlayers.filter(p => (p.role === "loup" || p.role === "infect" || p.role === "loup_blanc" || p.isInfected) && p.alive);
+        const votes = Object.values(state.wolfVotes);
+
+        if (votes.length >= aliveWolves.length && aliveWolves.length > 0) {
+            let counts = {};
+            votes.forEach(targetId => { counts[targetId] = (counts[targetId] || 0) + 1; });
+            
+            let maxVotes = 0;
+            let candidates = [];
+            for (let [targetId, count] of Object.entries(counts)) {
+                if (count > maxVotes) {
+                    maxVotes = count;
+                    candidates = [parseInt(targetId)];
+                } else if (count === maxVotes) {
+                    candidates.push(parseInt(targetId));
+                }
+            }
+
+            if (candidates.length > 1) {
+                state.tieMessage = "Égalité entre les loups ! Veuillez revoter.";
+                state.wolfVotes = {};
+                if(state.gameMode === 'network') broadcastState();
+                render();
+                return;
+            }
+
+            state.tieMessage = "";
+            state.nightActions.wolfVictim = candidates[0];
+            nextNightStep();
+        }
+    }
+
+    function checkVillageConsensus() {
+        const aliveVillagers = state.gamePlayers.filter(p => p.alive);
+        const votes = Object.values(state.villageVotes);
+
+        if (votes.length >= aliveVillagers.length && aliveVillagers.length > 0) {
+            let counts = {};
+            votes.forEach(targetId => { counts[targetId] = (counts[targetId] || 0) + 1; });
+            
+            if (state.corbeauTargetId !== null && counts[state.corbeauTargetId]) {
+                counts[state.corbeauTargetId] += 1;
+            }
+
+            let maxVotes = 0;
+            let candidates = [];
+            for (let [targetId, count] of Object.entries(counts)) {
+                if (count > maxVotes) {
+                    maxVotes = count;
+                    candidates = [parseInt(targetId)];
+                } else if (count === maxVotes) {
+                    candidates.push(parseInt(targetId));
+                }
+            }
+
+            if (candidates.length > 1) {
+                state.tieMessage = "Égalité parfaite au village ! Le vote doit être refait.";
+                state.villageVotes = {};
+                if(state.gameMode === 'network') broadcastState();
+                render();
+                return;
+            }
+
+            state.tieMessage = "";
+            const condemnedId = candidates[0];
+            const condemned = state.gamePlayers.find(p => p.id === condemnedId);
+
+            if (!state.firstDayVotePassed && condemned.role === 'ange') {
+                state.winner = 'Ange';
+                state.screen = 'end';
+                if(state.gameMode==='network') broadcastState();
+                render();
+                return;
+            }
+            state.firstDayVotePassed = true;
+            killPlayer(condemned.id, 'tribunal');
+
+            if (state.hunterPending) {
+                state.screen = 'hunter';
+            } else if (!checkGameEnd()) {
+                state.nightNumber++;
+                state.nightStep = 0;
+                state.nightActions = {};
+                state.screen = 'night';
+            }
+            if(state.gameMode==='network') broadcastState();
             render();
         }
     }
@@ -567,7 +668,7 @@
         const app = document.getElementById("app");
         var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
         
-        let html = '<header><div><h1>Loup-Garou</h1><div class="subtitle">Salle d\'Arcade &middot; MJ Centralisé</div></div>';
+        let html = '<header><div><h1>Loup-Garou</h1><div class="subtitle">Salle d\'Arcade &middot; Multijoueur Interactif</div></div>';
         html += '<div class="headerbtns">';
         html += '<button class="themebtn" onclick="toggleFullscreen()">'+(isFs ? "✕" : "⛶")+'</button>';
         html += '</div></header>';
@@ -577,17 +678,15 @@
             html += '<h2>Choix du mode</h2>';
             html += '<p class="dim" style="margin-bottom:15px;">Comment souhaitez-vous jouer ?</p>';
             html += '<button class="btn btn-primary" onclick="selectMode(\'local\')">📱 Un seul téléphone (Passe-partout)</button>';
-            html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="selectMode(\'network\')">🌐 Réseau (Le MJ pilote tout)</button>';
+            html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="selectMode(\'network\')">🌐 Réseau (Chacun son téléphone)</button>';
             html += '</div>';
         }
-        else if (state.screen === "net_host_options") {
+        else if (state.screen === "net_host_or_join") {
             html += '<button class="linkbtn" onclick="state.screen=\'mode_select\'; render();">&#8249; Retour</button>';
-            html += '<div class="panel center"><h2>Créer un salon</h2>';
-            html += '<p class="dim" style="margin-bottom:10px;">Entre ton pseudo :</p>';
+            html += '<div class="panel center"><h2>Mode Réseau</h2>';
+            html += '<p class="dim" style="margin-bottom:10px;">Entre ton pseudo pour créer le salon :</p>';
             html += '<input type="text" id="pseudoHost" placeholder="Ton pseudo">';
-            html += '<h2 style="margin-top:20px;">Mode du Maître du Jeu (MJ)</h2>';
-            html += '<button class="btn btn-primary" onclick="startHosting(\'auto\')">1. Le MJ joue (Participant)</button>';
-            html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="startHosting(\'narrator\')">2. Le MJ ne joue pas (Narrateur pur / Voit tout)</button>';
+            html += '<button class="btn btn-primary" onclick="startHosting()">Créer un salon</button>';
             html += '<button class="btn btn-ghost" style="margin-top:15px;" onclick="joinRoomForm()">Rejoindre un salon existant ›</button></div>';
         }
         else if (state.screen === "join_form") {
@@ -595,20 +694,34 @@
             html += '<input type="text" id="pseudoJoin" placeholder="Ton pseudo">';
             html += '<input type="text" id="roomCodeInput" placeholder="Code du salon (4 lettres)" style="text-transform:uppercase;">';
             html += '<button class="btn btn-primary" onclick="connectToRoom()">Se connecter</button>';
-            html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="state.screen=\'mode_select\'; render();">Retour</button></div>';
+            html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="state.screen=\'net_host_or_join\'; render();">Retour</button></div>';
         }
         else if (state.screen === "waiting_room") {
             html += '<div class="panel center"><h2>Salon d\'attente</h2>';
             html += '<p class="dim">Salon : <strong>'+roomCode+'</strong></p>';
-            html += '<p class="dim" style="margin-top:15px;">Le MJ prépare la partie, fermez les yeux !</p></div>';
+            html += '<p class="dim" style="margin-top:15px;">En attente que l\'hôte lance la partie...</p></div>';
         }
         else if (state.screen === "setup") {
             if(state.gameMode === "network" && isHost) {
-                html += '<div class="panel center"><h2>Code du salon : <span style="color:var(--moon)">'+roomCode+'</span></h2><p class="dim">Mode : <strong>'+(state.mjMode==='auto' ? 'MJ Joueur' : 'MJ Narrateur (Voit tout)')+'</strong></p></div>';
+                html += '<div class="panel center"><h2>Code du salon : <span style="color:var(--moon)">'+roomCode+'</span></h2><p class="dim">Partage ce code. Chaque joueur contrôlera son rôle.</p></div>';
             }
             html += renderSetup();
         }
+        else if (state.screen === "reveal") html += renderRevealLocal();
+        else if (state.screen === "reveal_net") html += renderRevealNet();
         else if (state.screen === "night") html += renderNight();
+        else if (state.screen === "waiting_vote") {
+            const aliveCount = state.gamePlayers.filter(p => p.alive).length;
+            const votedCount = Object.keys(state.villageVotes).length + Object.keys(state.wolfVotes).length;
+            html += `
+                <h1>⏳ Vote en cours</h1>
+                <div class="panel center" style="padding:40px 20px;">
+                    <h2>Votre vote a bien été pris en compte !</h2>
+                    <p class="dim" style="margin-top:15px;">Votes enregistrés : ${votedCount} / ${aliveCount}</p>
+                    <p class="dim" style="margin-top:5px;">En attente des autres joueurs...</p>
+                </div>
+            `;
+        }
         else if (state.screen === "day") html += renderDay();
         else if (state.screen === "vote") html += renderVote();
         else if (state.screen === "hunter") html += renderHunter();
@@ -619,7 +732,7 @@
         var ni = document.getElementById("playerNameInput");
         if(ni){ ni.addEventListener("keydown", function(e){ if(e.key==="Enter") addPlayer(); }); }
         var ph = document.getElementById("pseudoHost");
-        if(ph){ ph.addEventListener("keydown", function(e){ if(e.key==="Enter") startHosting('auto'); }); }
+        if(ph){ ph.addEventListener("keydown", function(e){ if(e.key==="Enter") startHosting(); }); }
         var pj = document.getElementById("pseudoJoin");
         if(pj){ pj.addEventListener("keydown", function(e){ if(e.key==="Enter") connectToRoom(); }); }
     }
@@ -661,55 +774,90 @@
         html += `<div class="panel"><h2>Rôles & Composition (${totalSpecial} spéciaux + ${simpleVillagers} villageois)</h2>${rolesHtml}</div>`;
 
         if(!disableControls) {
-            html += `<button class="btn btn-primary" onclick="startDistribution()">Lancer la partie ›</button>`;
+            html += `<button class="btn btn-primary" onclick="startDistribution()">Distribuer les rôles ›</button>`;
         } else {
-            html += `<p class="center dim" style="margin-top:15px;">Le MJ prépare la distribution des rôles sur son écran...</p>`;
-            if(state.gamePlayers && state.gamePlayers.length > 0) {
-                const myRoleObj = state.gamePlayers.find(p => p.name.toLowerCase() === myName.toLowerCase());
-                if(myRoleObj) {
-                    const rDef = ROLES_DEF[myRoleObj.role];
-                    html += `
-                        <div class="card-reveal" style="margin-top:20px;">
-                            <div style="font-size:3rem;">${rDef.icon}</div>
-                            <div class="role-badge">${rDef.name}</div>
-                            <p style="font-size:1.1rem; color:var(--text-sub);">${rDef.desc}</p>
-                        </div>
-                    `;
-                }
-            }
+            html += `<p class="center dim" style="margin-top:15px;">En attente que l'hôte lance la partie...</p>`;
         }
         return html;
+    }
+
+    function renderRevealLocal() {
+        const p = state.gamePlayers[state.revealIndex];
+        const role = ROLES_DEF[p.role];
+
+        if (!state.revealed) {
+            return `
+                <h1>Transmission du rôle</h1>
+                <p class="phase-subtitle">Joueur ${state.revealIndex + 1} / ${state.gamePlayers.length}</p>
+                <div class="card-reveal">
+                    <p style="color:var(--text-sub);">Donnez le téléphone à</p>
+                    <h2 style="font-size:1.4rem; margin:10px 0; color:var(--text-main);">${p.name}</h2>
+                    <button class="btn btn-primary" style="margin-top:16px;" onclick="state.revealed=true; render();">👁️ Révéler mon rôle</button>
+                </div>
+            `;
+        }
+
+        return `
+            <h1>Votre Rôle Secret</h1>
+            <p class="phase-subtitle">${p.name}</p>
+            <div class="card-reveal">
+                <div style="font-size:3rem;">${role.icon}</div>
+                <div class="role-badge">${role.name}</div>
+                <p style="font-size:1.1rem; color:var(--text-sub); line-height:1.4;">${role.desc}</p>
+            </div>
+            <button class="btn btn-ghost" onclick="
+                if (state.revealIndex + 1 < state.gamePlayers.length) {
+                    state.revealIndex++; state.revealed = false; render();
+                } else {
+                    state.screen = 'night'; render();
+                }
+            ">Cacher et passer au joueur suivant ›</button>
+        `;
+    }
+
+    function renderRevealNet() {
+        const myRoleObj = state.gamePlayers.find(p => p.name.toLowerCase() === myName.toLowerCase());
+        const rDef = myRoleObj ? ROLES_DEF[myRoleObj.role] : { name: "Villageois", icon: "🧑‍🌾", desc: "..." };
+
+        return `
+            <h1>Votre Rôle Secret</h1>
+            <div class="card-reveal">
+                <div style="font-size:3rem;">${rDef.icon}</div>
+                <div class="role-badge">${rDef.name}</div>
+                <p style="font-size:1.1rem; color:var(--text-sub); line-height:1.4;">${rDef.desc}</p>
+            </div>
+            ${isHost ? `<button class="btn btn-primary" onclick="state.screen='night'; broadcastState(); render();">Lancer la première nuit ›</button>` : `<p class="center dim">En attente du lancement de la première nuit par l'hôte...</p>`}
+        `;
     }
 
     function renderNight() {
         const steps = getNightSteps();
         const currentStep = steps[state.nightStep];
         const alivePlayers = state.gamePlayers.filter(p => p.alive);
-        const disableActions = (state.gameMode === "network" && !isHost);
+        const myPlayer = state.gamePlayers.find(p => p.name.toLowerCase() === myName.toLowerCase());
 
-        // Si le MJ a choisi le mode "Narrateur" et qu'on est au début, afficher le tableau secret sur l'écran du MJ
-        if (isHost && state.mjMode === "narrator" && state.nightNumber === 1 && state.nightStep === 0 && !state.narratorViewShown) {
-            state.narratorViewShown = true;
+        let isMyTurn = false;
+        if (state.gameMode === "local") {
+            isMyTurn = true;
+        } else {
+            if (currentStep === "cupidon" && myPlayer && myPlayer.role === "cupidon" && myPlayer.alive) isMyTurn = true;
+            if (currentStep === "garde" && myPlayer && myPlayer.role === "garde" && myPlayer.alive) isMyTurn = true;
+            if (currentStep === "corbeau" && myPlayer && myPlayer.role === "corbeau" && myPlayer.alive) isMyTurn = true;
+            if (currentStep === "voyante" && myPlayer && myPlayer.role === "voyante" && myPlayer.alive) isMyTurn = true;
+            if (currentStep === "loups" && myPlayer && (myPlayer.role === "loup" || myPlayer.role === "infect" || myPlayer.role === "loup_blanc" || myPlayer.isInfected) && myPlayer.alive) isMyTurn = true;
+            if (currentStep === "infect" && myPlayer && myPlayer.role === "infect" && myPlayer.alive) isMyTurn = true;
+            if (currentStep === "loup_blanc" && myPlayer && myPlayer.role === "loup_blanc" && myPlayer.alive) isMyTurn = true;
+            if (currentStep === "sorciere" && myPlayer && myPlayer.role === "sorciere" && myPlayer.alive) isMyTurn = true;
+            if (currentStep === "joueur_flute" && myPlayer && myPlayer.role === "joueur_flute" && myPlayer.alive) isMyTurn = true;
         }
 
-        if (disableActions) {
+        if (!isMyTurn && state.gameMode === "network") {
             return `
                 <h1>🌙 Nuit ${state.nightNumber}</h1>
                 <div class="panel center" style="padding:40px 20px;">
                     <div style="font-size: 3rem; margin-bottom: 15px;">💤</div>
-                    <h2>Le village dort...</h2>
-                    <p class="dim" style="margin-top: 10px;">Fermez les yeux. Le Maître du Jeu gère les tours sur son écran.</p>
-                </div>
-            `;
-        }
-
-        // Si le MJ est en mode Narrateur, afficher un rappel de qui a quel rôle en haut du panneau
-        let narratorHeader = "";
-        if (isHost && state.mjMode === "narrator") {
-            narratorHeader = `
-                <div style="background: rgba(168,85,247,0.15); border:1px solid var(--accent); padding:10px; margin-bottom:15px; font-size:0.95rem;">
-                    <strong>📋 Rappel Rôles Secrets :</strong><br>
-                    ${state.gamePlayers.map(gp => `${gp.name}: ${ROLES_DEF[gp.role].icon} ${ROLES_DEF[gp.role].name}`).join(" | ")}
+                    <h2>Fermez les yeux...</h2>
+                    <p class="dim" style="margin-top: 10px;">Ce n'est pas votre tour ou vous dormez.</p>
                 </div>
             `;
         }
@@ -718,8 +866,8 @@
 
         if (currentStep === "cupidon") {
             contentHtml = `
-                <h2>💘 Réveil de Cupidon</h2>
-                <p class="phase-subtitle">Le MJ désigne deux amoureux.</p>
+                <h2>💘 Cupidon</h2>
+                <p class="phase-subtitle">Choisissez deux amoureux.</p>
                 <div class="select-list">
                     ${alivePlayers.map(p => `
                         <div class="select-item ${(state.lovers.includes(p.id)) ? 'selected' : ''}" onclick="
@@ -738,12 +886,12 @@
                 <button class="btn btn-primary" ${state.lovers.length === 2 ? "" : "disabled"} onclick="
                     state.gamePlayers.forEach(p => p.isLover = state.lovers.includes(p.id));
                     nextNightStep();
-                ">Valider les amoureux ›</button>
+                ">Valider ›</button>
             `;
         } else if (currentStep === "garde") {
             contentHtml = `
-                <h2>🛡️ Réveil du Garde</h2>
-                <p class="phase-subtitle">Le MJ choisit un joueur à protéger.</p>
+                <h2>🛡️ Le Garde</h2>
+                <p class="phase-subtitle">Protégez un joueur.</p>
                 <div class="select-list">
                     ${alivePlayers.map(p => `
                         <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
@@ -754,12 +902,12 @@
                 <button class="btn btn-primary" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
                     state.nightActions.protected = state.selectedTarget;
                     nextNightStep();
-                ">Protéger ce joueur ›</button>
+                ">Protéger ›</button>
             `;
         } else if (currentStep === "corbeau") {
             contentHtml = `
-                <h2>🐦‍⬛ Réveil du Corbeau</h2>
-                <p class="phase-subtitle">Le MJ maudit un joueur pour le vote.</p>
+                <h2>🐦‍⬛ Le Corbeau</h2>
+                <p class="phase-subtitle">Maudissez un joueur.</p>
                 <div class="select-list">
                     ${alivePlayers.map(p => `
                         <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
@@ -770,26 +918,39 @@
                 <button class="btn btn-primary" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
                     state.nightActions.corbeauTarget = state.selectedTarget;
                     nextNightStep();
-                ">Maudire ce joueur ›</button>
+                ">Maudire ›</button>
             `;
         } else if (currentStep === "voyante") {
+            const targetObj = state.gamePlayers.find(p => p.id === state.voyanteRevealedTargetId);
             contentHtml = `
-                <h2>🔮 Réveil de la Voyante</h2>
-                <p class="phase-subtitle">Le MJ consulte secrètement l'identité d'un joueur.</p>
-                <div class="select-list">
-                    ${alivePlayers.map(p => `
-                        <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
-                            <span>${p.name}</span>
-                            <span>${state.selectedTarget === p.id ? ROLES_DEF[p.role].icon + ' ' + ROLES_DEF[p.role].name : '❓'}</span>
-                        </div>
-                    `).join("")}
-                </div>
-                <button class="btn btn-primary" ${state.selectedTarget !== null ? "" : "disabled"} onclick="nextNightStep()">Continuer ›</button>
+                <h2>🔮 La Voyante</h2>
+                <p class="phase-subtitle">Découvrez le rôle d'un unique joueur.</p>
+                
+                ${state.voyanteRevealedTargetId !== null && targetObj ? `
+                    <div class="card-reveal" style="margin:10px 0;">
+                        <p style="color:var(--text-sub);">Identité de ${targetObj.name} :</p>
+                        <div class="role-badge">${ROLES_DEF[targetObj.role].icon} ${ROLES_DEF[targetObj.role].name}</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="nextNightStep()">J'ai vu, continuer ›</button>
+                ` : `
+                    <div class="select-list">
+                        ${alivePlayers.map(p => `
+                            <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
+                                <span>${p.name}</span>
+                            </div>
+                        `).join("")}
+                    </div>
+                    <button class="btn btn-primary" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
+                        state.voyanteRevealedTargetId = state.selectedTarget;
+                        render();
+                    ">Voir son rôle ›</button>
+                `}
             `;
         } else if (currentStep === "loups") {
             contentHtml = `
-                <h2>🐺 Réveil des Loups-Garous</h2>
-                <p class="phase-subtitle">Le MJ désigne la victime des loups.</p>
+                <h2>🐺 Les Loups-Garous</h2>
+                <p class="phase-subtitle">Désignez une victime commune (Égalité = vote refait).</p>
+                ${state.tieMessage ? `<p style="color:var(--amber); text-align:center; font-weight:bold;">${state.tieMessage}</p>` : ""}
                 <div class="select-list">
                     ${alivePlayers.map(p => `
                         <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
@@ -798,19 +959,22 @@
                     `).join("")}
                 </div>
                 <button class="btn btn-danger" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
-                    state.nightActions.wolfVictim = state.selectedTarget;
-                    nextNightStep();
-                ">Valider la victime des loups ›</button>
+                    if(state.gameMode === 'network') {
+                        conn.send({ type: 'WOLF_VOTE', playerId: myPlayer.id, targetId: state.selectedTarget });
+                        state.screen = 'waiting_vote';
+                        render();
+                    } else {
+                        state.nightActions.wolfVictim = state.selectedTarget;
+                        nextNightStep();
+                    }
+                ">Voter cette victime ›</button>
             `;
         } else if (currentStep === "infect") {
             contentHtml = `
                 <h2>🩸 Infect Père des Loups</h2>
                 <p class="phase-subtitle">Voulez-vous infecter la victime ?</p>
                 <div style="display:flex; gap:10px; margin-top:20px;">
-                    <button class="btn btn-danger" onclick="
-                        state.nightActions.infected = state.nightActions.wolfVictim;
-                        nextNightStep();
-                    ">Infecter</button>
+                    <button class="btn btn-danger" onclick="state.nightActions.infected = state.nightActions.wolfVictim; nextNightStep();">Infecter</button>
                     <button class="btn btn-ghost" onclick="nextNightStep()">Ne pas infecter</button>
                 </div>
             `;
@@ -826,28 +990,25 @@
                     `).join("")}
                 </div>
                 <div style="display:flex; gap:10px;">
-                    <button class="btn btn-danger" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
-                        state.nightActions.whiteKill = state.selectedTarget;
-                        nextNightStep();
-                    ">Tuer</button>
+                    <button class="btn btn-danger" ${state.selectedTarget !== null ? "" : "disabled"} onclick="state.nightActions.whiteKill = state.selectedTarget; nextNightStep();">Tuer</button>
                     <button class="btn btn-ghost" onclick="nextNightStep()">Passer</button>
                 </div>
             `;
         } else if (currentStep === "sorciere") {
             const victim = state.gamePlayers.find(p => p.id === state.nightActions.wolfVictim);
             contentHtml = `
-                <h2>🧪 Réveil de la Sorcière</h2>
+                <h2>🧪 La Sorcière</h2>
                 <p class="phase-subtitle">Victime des loups : <strong>${victim ? victim.name : "Personne"}</strong></p>
                 ${state.witchPotions.heal && victim ? `
                     <button class="btn" style="background: var(--green); color: #06210f; margin-bottom:20px;" onclick="
                         state.nightActions.witchSaved = true;
                         state.witchPotions.heal = false;
                         render();
-                    ">💚 Utiliser la potion de vie</button>
+                    ">💚 Potion de vie</button>
                 ` : ""}
                 ${state.witchPotions.death ? `
                     <div class="select-list">
-                        <p style="font-size:1rem; color:var(--text-sub);">Potion de mort sur :</p>
+                        <p style="font-size:1rem; color:var(--text-sub);">Potion de mort :</p>
                         ${alivePlayers.map(p => `
                             <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
                                 <span>${p.name}</span>
@@ -861,11 +1022,11 @@
                         state.witchPotions.death = false;
                     }
                     nextNightStep();
-                ">Terminer la sorcière ›</button>
+                ">Terminer ›</button>
             `;
         } else if (currentStep === "joueur_flute") {
             contentHtml = `
-                <h2>🪈 Réveil du Joueur de Flûte</h2>
+                <h2>🪈 Joueur de Flûte</h2>
                 <p class="phase-subtitle">Charmer 2 joueurs :</p>
                 <div class="select-list">
                     ${alivePlayers.map(p => `
@@ -895,31 +1056,19 @@
         }
 
         return `
-            <h1>🌙 Nuit ${state.nightNumber} (MJ)</h1>
-            ${narratorHeader}
+            <h1>🌙 Nuit ${state.nightNumber}</h1>
             <div class="panel">${contentHtml}</div>
         `;
     }
 
     function renderDay() {
-        const disableActions = (state.gameMode === "network" && !isHost);
-        if (disableActions) {
-            return `
-                <h1>☀️ Village de Jour</h1>
-                <div class="panel center">
-                    <h2>Le village se réveille</h2>
-                    <p class="dim" style="margin-top: 10px;">Écoutez le MJ annoncer les événements de la nuit.</p>
-                </div>
-            `;
-        }
-
         let summaryDeaths = "";
         if (state.dayDeaths.length === 0) {
             summaryDeaths = "<p style='color:var(--green); font-weight:bold; margin:14px 0; text-align:center;'>Personne n'est mort cette nuit ! 🎉</p>";
         } else {
             summaryDeaths = `
                 <div style="margin:14px 0;">
-                    <p style="color:var(--red); font-weight:bold; margin-bottom:8px;">Victimes :</p>
+                    <p style="color:var(--red); font-weight:bold; margin-bottom:8px;">Victimes de la nuit :</p>
                     ${state.dayDeaths.map(d => `
                         <div class="select-item dead" style="margin-bottom:6px;">
                             <span>${d.player.name} (${ROLES_DEF[d.player.role].name})</span>
@@ -950,18 +1099,18 @@
                 state.selectedTarget = null;
                 if(state.gameMode==='network') broadcastState();
                 render();
-            ">Passer au vote ›</button>
+            ">Passer au vote du village ›</button>
         `;
     }
 
     function renderVote() {
         const alive = state.gamePlayers.filter(p => p.alive);
-        const disableActions = (state.gameMode === "network" && !isHost);
-        if (disableActions) return `<div class="panel center"><h2>Vote en cours...</h2></div>`;
+        const myPlayer = state.gamePlayers.find(p => p.name.toLowerCase() === myName.toLowerCase());
 
         return `
             <h1>⚖️ Vote du Village</h1>
-            <p class="phase-subtitle">Désignez l'accusé au bûcher.</p>
+            <p class="phase-subtitle">Désignez l'accusé au bûcher (Égalité = vote refait).</p>
+            ${state.tieMessage ? `<p style="color:var(--amber); text-align:center; font-weight:bold;">${state.tieMessage}</p>` : ""}
             <div class="select-list">
                 ${alive.map(p => `
                     <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
@@ -971,35 +1120,20 @@
                 `).join("")}
             </div>
             <button class="btn btn-danger" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
-                const condemned = state.gamePlayers.find(p => p.id === state.selectedTarget);
-                if (!state.firstDayVotePassed && condemned.role === 'ange') {
-                    state.winner = 'Ange';
-                    state.screen = 'end';
+                if(state.gameMode === 'network') {
+                    conn.send({ type: 'VILLAGE_VOTE', playerId: myPlayer.id, targetId: state.selectedTarget });
+                    state.screen = 'waiting_vote';
                     render();
-                    return;
+                } else {
+                    state.villageVotes[myPlayer.id] = state.selectedTarget;
+                    checkVillageConsensus();
                 }
-                state.firstDayVotePassed = true;
-                killPlayer(condemned.id, 'tribunal');
-
-                if (state.hunterPending) {
-                    state.screen = 'hunter';
-                } else if (!checkGameEnd()) {
-                    state.nightNumber++;
-                    state.nightStep = 0;
-                    state.nightActions = {};
-                    state.screen = 'night';
-                }
-                if(state.gameMode==='network') broadcastState();
-                render();
-            ">Exécuter le condamné</button>
+            ">Voter contre ce joueur ›</button>
         `;
     }
 
     function renderHunter() {
         const alive = state.gamePlayers.filter(p => p.alive);
-        const disableActions = (state.gameMode === "network" && !isHost);
-        if (disableActions) return `<div class="panel center"><h2>Action du Chasseur...</h2></div>`;
-
         return `
             <h1>🏹 Dernier Tir du Chasseur</h1>
             <div class="select-list">
