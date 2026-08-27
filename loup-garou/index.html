@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0a0713">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Loup-Garou — Salle d'Arcade</title>
+    <title>Loup-Garou — Salle d'Arcade (Mode MJ Centralisé)</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -183,20 +183,20 @@
 <div id="app"></div>
 <script>
     const ROLES_DEF = {
-        loup: { name: "Loup-Garou", team: "loups", icon: "🐺", desc: "Dévore un villageois chaque nuit avec la meute." },
-        infect: { name: "Infect Père des Loups", team: "loups", icon: "🩸", desc: "Loup-garou capable d'infecter une victime pour la convertir." },
-        loup_blanc: { name: "Loup Blanc", team: "solo", icon: "🐺⚪", desc: "Chasse avec les loups, mais peut éliminer un loup une nuit sur deux." },
-        corbeau: { name: "Le Corbeau", team: "village", icon: "🐦‍⬛", desc: "Désigne chaque nuit un joueur qui écope d'une voix de pénalité au vote." },
-        chevalier: { name: "Chevalier Rouillé", team: "village", icon: "🗡️", desc: "Empoisonne le loup qui le dévore (le loup meurt la nuit suivante)." },
-        joueur_flute: { name: "Joueur de Flûte", team: "solo", icon: "🪈", desc: "Charme des joueurs chaque nuit et gagne seul s'ils sont tous charmés." },
-        voyante: { name: "Voyante", team: "village", icon: "🔮", desc: "Espionne l'identité réelle d'un joueur chaque nuit." },
-        sorciere: { name: "Sorcière", team: "village", icon: "🧪", desc: "Possède une potion de vie et une potion de mort uniques." },
-        chasseur: { name: "Chasseur", team: "village", icon: "🏹", desc: "Tire sur un joueur s'il est éliminé." },
-        garde: { name: "Garde", team: "village", icon: "🛡️", desc: "Protège un joueur contre les loups chaque nuit." },
-        petite_fille: { name: "Petite Fille", team: "village", icon: "👧", desc: "Peut espionner discrètement les loups la nuit." },
-        cupidon: { name: "Cupidon", team: "village", icon: "💘", desc: "Désigne deux amoureux la première nuit. Si l'un meurt, l'autre meurt." },
-        ange: { name: "Ange", team: "solo", icon: "🪽", desc: "Gagne la partie s'il parvient à être éliminé lors du tout premier vote de jour." },
-        villageois: { name: "Simple Villageois", team: "village", icon: "🧑‍🌾", desc: "Ne possède aucun pouvoir particulier. Débat et vote le jour." }
+        loup: { name: "Loup-Garou", team: "loups", icon: "🐺", desc: "Dévore un villageois chaque nuit." },
+        infect: { name: "Infect Père des Loups", team: "loups", icon: "🩸", desc: "Loup pouvant infecter sa victime." },
+        loup_blanc: { name: "Loup Blanc", team: "solo", icon: "🐺⚪", desc: "Peut éliminer un loup une nuit sur deux." },
+        corbeau: { name: "Le Corbeau", team: "village", icon: "🐦‍⬛", desc: "Ajoute 1 voix de pénalité à un joueur chaque nuit." },
+        chevalier: { name: "Chevalier Rouillé", team: "village", icon: "🗡️", desc: "Empoisonne le loup qui le dévore." },
+        joueur_flute: { name: "Joueur de Flûte", team: "solo", icon: "🪈", desc: "Charme des joueurs et gagne s'ils sont tous charmés." },
+        voyante: { name: "Voyante", team: "village", icon: "🔮", desc: "Découvre le rôle d'un joueur chaque nuit." },
+        sorciere: { name: "Sorcière", team: "village", icon: "🧪", desc: "Possède une potion de vie et de mort." },
+        chasseur: { name: "Chasseur", team: "village", icon: "🏹", desc: "Tire sur quelqu'un en mourant." },
+        garde: { name: "Garde", team: "village", icon: "🛡️", desc: "Protège quelqu'un chaque nuit." },
+        petite_fille: { name: "Petite Fille", team: "village", icon: "👧", desc: "Espionne les loups." },
+        cupidon: { name: "Cupidon", team: "village", icon: "💘", desc: "Forme un couple d'amoureux." },
+        ange: { name: "Ange", team: "solo", icon: "🪽", desc: "Gagne s'il est éliminé au premier tour." },
+        villageois: { name: "Simple Villageois", team: "village", icon: "🧑‍🌾", desc: "Aucun pouvoir particulier." }
     };
 
     var peer = null;
@@ -208,18 +208,14 @@
 
     var state = {
         gameMode: null, // "local" ou "network"
-        mjMode: "auto", // "auto" (MJ joue et l'app guide) ou "narrator" (MJ ne joue pas et voit tous les rôles)
         screen: "mode_select",
         players: ["Joueur 1", "Joueur 2", "Joueur 3", "Joueur 4", "Joueur 5", "Joueur 6"],
-        silentMode: false,
         roleCounts: {
             loup: 1, infect: 0, loup_blanc: 0, corbeau: 0, chevalier: 0, joueur_flute: 0,
             voyante: 1, sorciere: 1, chasseur: 0,
             garde: 0, petite_fille: 0, cupidon: 0, ange: 0
         },
         gamePlayers: [],
-        revealIndex: 0,
-        revealed: false,
         nightNumber: 1,
         nightStep: 0,
         nightActions: {},
@@ -231,6 +227,7 @@
         hunterPending: null,
         dayDeaths: [],
         selectedTarget: null,
+        wolfVotes: {}, // Stocke les votes de chaque loup connecté
         firstDayVotePassed: false,
         winner: null
     };
@@ -241,7 +238,7 @@
             state.screen = "setup";
             render();
         } else {
-            state.screen = "net_host_options";
+            state.screen = "net_host_or_join";
             render();
         }
     }
@@ -253,22 +250,14 @@
         return code;
     }
 
-    function startHosting(mjType) {
+    function startHosting() {
         var nameInput = document.getElementById("pseudoHost");
         if(!nameInput || !nameInput.value.trim()) { alert("Entre ton pseudo d'hôte !"); return; }
         
         myName = nameInput.value.trim();
         isHost = true;
         roomCode = generateRoomCode();
-        state.mjMode = mjType; // "auto" ou "narrator"
-        
-        if (state.mjMode === "narrator") {
-            // Le MJ ne joue pas, il anime
-            state.players = [];
-        } else {
-            // Le MJ joue et participe
-            state.players = [myName];
-        }
+        state.players = [myName]; // L'hôte est le MJ principal
 
         if(peer) peer.destroy();
         peer = new Peer(roomCode);
@@ -287,6 +276,10 @@
                     }
                     broadcastState();
                     render();
+                } else if(data.type === "WOLF_VOTE") {
+                    // Enregistre le vote d'un loup
+                    state.wolfVotes[data.playerId] = data.targetId;
+                    checkWolvesConsensus();
                 }
             });
         });
@@ -409,16 +402,16 @@
             isInfected: false
         }));
 
-        state.revealIndex = 0;
-        state.revealed = false;
         state.nightNumber = 1;
+        state.nightStep = 0;
         state.witchPotions = { heal: true, death: true };
         state.lovers = [];
         state.infectedPlayerId = null;
         state.corbeauTargetId = null;
         state.charmedPlayerIds = [];
+        state.wolfVotes = {};
         state.firstDayVotePassed = false;
-        state.screen = "reveal";
+        state.screen = "night";
         
         if(state.gameMode === "network") broadcastState();
         render();
@@ -449,12 +442,41 @@
         const steps = getNightSteps();
         state.nightStep++;
         state.selectedTarget = null;
+        state.wolfVotes = {};
 
         if (state.nightStep >= steps.length) {
             resolveNight();
         } else {
             if(state.gameMode === "network") broadcastState();
             render();
+        }
+    }
+
+    function checkWolvesConsensus() {
+        const aliveWolves = state.gamePlayers.filter(p => (p.role === "loup" || p.role === "infect" || p.role === "loup_blanc" || p.isInfected) && p.alive);
+        const votes = Object.values(state.wolfVotes);
+
+        // Si tous les loups ont voté
+        if (votes.length >= aliveWolves.length && aliveWolves.length > 0) {
+            // Compter les votes
+            let counts = {};
+            votes.forEach(targetId => { counts[targetId] = (counts[targetId] || 0) + 1; });
+            
+            let maxVotes = 0;
+            let candidates = [];
+            for (let [targetId, count] of Object.entries(counts)) {
+                if (count > maxVotes) {
+                    maxVotes = count;
+                    candidates = [parseInt(targetId)];
+                } else if (count === maxVotes) {
+                    candidates.push(parseInt(targetId));
+                }
+            }
+
+            // En cas d'égalité, choix aléatoire parmi les ex-aequo
+            let chosenTarget = candidates[Math.floor(Math.random() * candidates.length)];
+            state.nightActions.wolfVictim = chosenTarget;
+            nextNightStep();
         }
     }
 
@@ -566,15 +588,11 @@
         return false;
     }
 
-    function isGameHost() {
-        return state.gameMode !== "network" || isHost === true;
-    }
-
     function render() {
         const app = document.getElementById("app");
         var isFs = !!(document.fullscreenElement || document.webkitFullscreenElement);
         
-        let html = '<header><div><h1>Loup-Garou</h1><div class="subtitle">Salle d\'Arcade &middot; Nuit & Village</div></div>';
+        let html = '<header><div><h1>Loup-Garou</h1><div class="subtitle">Salle d\'Arcade &middot; MJ Centralisé</div></div>';
         html += '<div class="headerbtns">';
         html += '<button class="themebtn" onclick="toggleFullscreen()">'+(isFs ? "✕" : "⛶")+'</button>';
         html += '</div></header>';
@@ -583,18 +601,16 @@
             html += '<div class="panel center">';
             html += '<h2>Choix du mode</h2>';
             html += '<p class="dim" style="margin-bottom:15px;">Comment souhaitez-vous jouer ?</p>';
-            html += '<button class="btn btn-primary" onclick="selectMode(\'local\')">📱 Un seul téléphone</button>';
-            html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="selectMode(\'network\')">🌐 Chacun son téléphone</button>';
+            html += '<button class="btn btn-primary" onclick="selectMode(\'local\')">📱 Un seul téléphone (Passe-partout)</button>';
+            html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="selectMode(\'network\')">🌐 Réseau (Le MJ pilote tout)</button>';
             html += '</div>';
         }
-        else if (state.screen === "net_host_options") {
+        else if (state.screen === "net_host_or_join") {
             html += '<button class="linkbtn" onclick="state.screen=\'mode_select\'; render();">&#8249; Retour</button>';
-            html += '<div class="panel center"><h2>Créer un salon</h2>';
-            html += '<p class="dim" style="margin-bottom:10px;">Entre ton pseudo :</p>';
+            html += '<div class="panel center"><h2>Mode Réseau</h2>';
+            html += '<p class="dim" style="margin-bottom:10px;">Entre ton pseudo pour créer le salon MJ :</p>';
             html += '<input type="text" id="pseudoHost" placeholder="Ton pseudo">';
-            html += '<h2 style="margin-top:20px;">Rôle du Maître du Jeu (MJ)</h2>';
-            html += '<button class="btn btn-primary" onclick="startHosting(\'auto\')">1. Le MJ joue (MJ Automatique)</button>';
-            html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="startHosting(\'narrator\')">2. Le MJ ne joue pas (Narrateur / Voit tout)</button>';
+            html += '<button class="btn btn-primary" onclick="startHosting()">Créer le salon (Devenir le MJ)</button>';
             html += '<button class="btn btn-ghost" style="margin-top:15px;" onclick="joinRoomForm()">Rejoindre un salon existant ›</button></div>';
         }
         else if (state.screen === "join_form") {
@@ -602,26 +618,19 @@
             html += '<input type="text" id="pseudoJoin" placeholder="Ton pseudo">';
             html += '<input type="text" id="roomCodeInput" placeholder="Code du salon (4 lettres)" style="text-transform:uppercase;">';
             html += '<button class="btn btn-primary" onclick="connectToRoom()">Se connecter</button>';
-            html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="state.screen=\'mode_select\'; render();">Retour</button></div>';
+            html += '<button class="btn btn-ghost" style="margin-top:10px;" onclick="state.screen=\'net_host_or_join\'; render();">Retour</button></div>';
         }
         else if (state.screen === "waiting_room") {
             html += '<div class="panel center"><h2>Salon d\'attente</h2>';
             html += '<p class="dim">Salon : <strong>'+roomCode+'</strong></p>';
-            html += '<p class="dim" style="margin-top:15px;">En attente que l\'hôte lance la partie...</p></div>';
+            html += '<p class="dim" style="margin-top:15px;">Le MJ prépare la partie, fermez les yeux !</p></div>';
         }
         else if (state.screen === "setup") {
-            if(state.gameMode === "network") {
-                if(isHost) {
-                    html += '<div class="panel center"><h2>Code du salon (Hôte)</h2><div class="codebox">'+roomCode+'</div><p class="dim">Mode MJ : <strong>'+(state.mjMode==='auto' ? 'MJ Joueur & Automatique' : 'MJ Narrateur (Voit tout)')+'</strong></p></div>';
-                } else {
-                    html += '<div class="panel center"><h2>Salon en cours</h2><p class="dim">Seul l\'hôte peut modifier les paramètres.</p></div>';
-                }
-            } else {
-                html += '<button class="linkbtn" onclick="state.screen=\'mode_select\'; render();">&#8249; Changer de mode</button>';
+            if(state.gameMode === "network" && isHost) {
+                html += '<div class="panel center"><h2>Code du salon : <span style="color:var(--moon)">'+roomCode+'</span></h2><p class="dim">Les joueurs connectés voient uniquement leur rôle secret. Tu gères tout d\'ici.</p></div>';
             }
             html += renderSetup();
         }
-        else if (state.screen === "reveal") html += renderReveal();
         else if (state.screen === "night") html += renderNight();
         else if (state.screen === "day") html += renderDay();
         else if (state.screen === "vote") html += renderVote();
@@ -633,7 +642,7 @@
         var ni = document.getElementById("playerNameInput");
         if(ni){ ni.addEventListener("keydown", function(e){ if(e.key==="Enter") addPlayer(); }); }
         var ph = document.getElementById("pseudoHost");
-        if(ph){ ph.addEventListener("keydown", function(e){ if(e.key==="Enter") startHosting('auto'); }); }
+        if(ph){ ph.addEventListener("keydown", function(e){ if(e.key==="Enter") startHosting(); }); }
         var pj = document.getElementById("pseudoJoin");
         if(pj){ pj.addEventListener("keydown", function(e){ if(e.key==="Enter") connectToRoom(); }); }
     }
@@ -647,7 +656,7 @@
         let chipsHtml = state.players.map((p, i) => `
             <div class="chip">
                 <span>${p}</span>
-                ${(state.gameMode === "local" && totalPlayers > 1) ? `<button onclick="removePlayer(${i})">✕</button>` : ""}
+                ${(!disableControls && totalPlayers > 1) ? `<button onclick="removePlayer(${i})">✕</button>` : ""}
             </div>
         `).join("");
 
@@ -666,104 +675,34 @@
         `).join("");
 
         let html = "";
-        html += `<div class="panel"><h2>Joueurs connectés (${totalPlayers})</h2><div class="chips">${chipsHtml}</div>`;
-        if(!disableControls && state.gameMode === "local") {
+        html += `<div class="panel"><h2>Joueurs inscrits (${totalPlayers})</h2><div class="chips">${chipsHtml}</div>`;
+        if(!disableControls) {
             html += `<div class="inline2"><input type="text" id="playerNameInput" placeholder="Nom du joueur"><button class="btn btn-ghost btn-small" onclick="addPlayer()">+</button></div>`;
         }
         html += `</div>`;
 
-        html += `<div class="panel"><h2>Rôles & Pouvoirs (${totalSpecial} spéciaux + ${simpleVillagers} villageois)</h2>${rolesHtml}</div>`;
+        html += `<div class="panel"><h2>Rôles & Composition (${totalSpecial} spéciaux + ${simpleVillagers} villageois)</h2>${rolesHtml}</div>`;
 
         if(!disableControls) {
-            html += `<button class="btn btn-primary" onclick="startDistribution()">Distribuer les rôles ›</button>`;
+            html += `<button class="btn btn-primary" onclick="startDistribution()">Lancer la partie ›</button>`;
         } else {
-            html += `<p class="center dim" style="margin-top:15px;">En attente que l'hôte lance la partie...</p>`;
+            html += `<p class="center dim" style="margin-top:15px;">Le MJ prépare la distribution des rôles sur son écran...</p>`;
+            // Si le client est connecté, afficher son rôle secret s'il est attribué
+            if(state.gamePlayers && state.gamePlayers.length > 0) {
+                const myRoleObj = state.gamePlayers.find(p => p.name.toLowerCase() === myName.toLowerCase());
+                if(myRoleObj) {
+                    const rDef = ROLES_DEF[myRoleObj.role];
+                    html += `
+                        <div class="card-reveal" style="margin-top:20px;">
+                            <div style="font-size:3rem;">${rDef.icon}</div>
+                            <div class="role-badge">${rDef.name}</div>
+                            <p style="font-size:1.1rem; color:var(--text-sub);">${rDef.desc}</p>
+                        </div>
+                    `;
+                }
+            }
         }
         return html;
-    }
-
-    function renderReveal() {
-        if(state.gameMode === "network") {
-            var html = '';
-            
-            // Si le MJ a choisi le mode "Narrateur" (ne joue pas)
-            if (isHost && state.mjMode === "narrator") {
-                html += '<div class="panel"><h2>TABLEAU DE BORD DU MJ (SECRET)</h2>';
-                html += '<p class="dim" style="margin-bottom:15px;">En tant que narrateur, tu ne reçois pas de rôle secret. Voici la liste des rôles distribués pour animer la partie :</p>';
-                html += '<div class="select-list">';
-                state.gamePlayers.forEach(gp => {
-                    html += `<div class="select-item"><span><strong>${gp.name}</strong></span><span>${ROLES_DEF[gp.role].icon} ${ROLES_DEF[gp.role].name}</span></div>`;
-                });
-                html += '</div></div>';
-
-                html += '<div class="panel center">';
-                html += '<p class="dim" style="margin-bottom:10px;">Annonce le début de la partie aux joueurs :</p>';
-                html += '<button class="btn btn-primary" onclick="state.screen=\'night\'; state.nightStep=0; state.nightActions={}; broadcastState(); render();">Lancer la première nuit &#8250;</button>';
-                html += '</div>';
-                return html;
-            }
-
-            // Mode Normal (Le MJ joue et a un rôle)
-            html += '<div class="panel center" style="padding:40px 18px;">';
-            var myRole = state.gamePlayers.find(function(p){ return p.name.toLowerCase() === myName.toLowerCase(); });
-            
-            html += '<div class="card-reveal" style="margin:0 0 20px 0;">';
-            html += '<div style="font-size:3rem;">'+(myRole ? ROLES_DEF[myRole.role].icon : "❓")+'</div>';
-            html += '<div class="role-badge">'+(myRole ? ROLES_DEF[myRole.role].name : "En attente")+'</div>';
-            html += '<p style="font-size:1.1rem; color:var(--text-sub); line-height:1.4;">'+(myRole ? ROLES_DEF[myRole.role].desc : "")+'</p>';
-            html += '</div></div>';
-
-            if(isHost){
-                html += '<div class="panel center">';
-                html += '<p class="dim" style="margin-bottom:10px;">Une fois que tout le monde a pris connaissance de son rôle :</p>';
-                html += '<button class="btn btn-primary" onclick="state.screen=\'night\'; state.nightStep=0; state.nightActions={}; broadcastState(); render();">Lancer la première nuit &#8250;</button>';
-                html += '</div>';
-            } else {
-                html += '<p class="center dim" style="margin-top:15px;">En attente que l\'hôte lance la première nuit...</p>';
-            }
-            return html;
-        }
-
-        const p = state.gamePlayers[state.revealIndex];
-        const role = ROLES_DEF[p.role];
-        
-        let alliesHtml = "";
-        if (role.team === "loups") {
-            const allies = state.gamePlayers.filter(pl => pl.id !== p.id && (pl.role === "loup" || pl.role === "infect"));
-            if (allies.length > 0) {
-                alliesHtml = `<p style="font-size:1rem; margin-top:10px; color:var(--red);">Vos alliés loups : ${allies.map(a => a.name).join(", ")}</p>`;
-            }
-        }
-
-        if (!state.revealed) {
-            return `
-                <h1>Transmission du rôle</h1>
-                <p class="phase-subtitle">Joueur ${state.revealIndex + 1} / ${state.gamePlayers.length}</p>
-                <div class="card-reveal">
-                    <p style="color:var(--text-sub);">Donnez le téléphone à</p>
-                    <h2 style="font-size:1.4rem; margin:10px 0; color:var(--text-main);">${p.name}</h2>
-                    <button class="btn btn-primary" style="margin-top:16px;" onclick="state.revealed=true; render();">👁️ Révéler mon rôle</button>
-                </div>
-            `;
-        }
-
-        return `
-            <h1>Votre Rôle Secret</h1>
-            <p class="phase-subtitle">${p.name}</p>
-            <div class="card-reveal">
-                <div style="font-size:3rem;">${role.icon}</div>
-                <div class="role-badge">${role.name}</div>
-                <p style="font-size:1.1rem; color:var(--text-sub); line-height:1.4;">${role.desc}</p>
-                ${alliesHtml}
-            </div>
-            <button class="btn btn-ghost" onclick="
-                if (state.revealIndex + 1 < state.gamePlayers.length) {
-                    state.revealIndex++; state.revealed = false; render();
-                } else {
-                    state.screen = 'night'; state.nightStep = 0; state.nightActions = {}; render();
-                }
-            ">Cacher et passer au joueur suivant ›</button>
-        `;
     }
 
     function renderNight() {
@@ -772,22 +711,32 @@
         const alivePlayers = state.gamePlayers.filter(p => p.alive);
         const disableActions = (state.gameMode === "network" && !isHost);
 
+        // Si on est un simple joueur connecté (pas le MJ), on voit uniquement l'écran "Fermez les yeux"
+        if (disableActions) {
+            return `
+                <h1>🌙 Nuit ${state.nightNumber}</h1>
+                <div class="panel center" style="padding:40px 20px;">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">💤</div>
+                    <h2>Le village dort...</h2>
+                    <p class="dim" style="margin-top: 10px;">Fermez les yeux. Le Maître du Jeu gère les tours sur son écran.</p>
+                </div>
+            `;
+        }
+
         let contentHtml = "";
 
         if (currentStep === "cupidon") {
             contentHtml = `
                 <h2>💘 Réveil de Cupidon</h2>
-                <p class="phase-subtitle">Désignez deux joueurs pour former le couple d'amoureux.</p>
+                <p class="phase-subtitle">Le MJ désigne deux amoureux.</p>
                 <div class="select-list">
                     ${alivePlayers.map(p => `
                         <div class="select-item ${(state.lovers.includes(p.id)) ? 'selected' : ''}" onclick="
-                            if(${disableActions}) return;
                             if (state.lovers.includes(${p.id})) {
                                 state.lovers = state.lovers.filter(id => id !== ${p.id});
                             } else if (state.lovers.length < 2) {
                                 state.lovers.push(${p.id});
                             }
-                            if(state.gameMode === 'network') broadcastState();
                             render();
                         ">
                             <span>${p.name}</span>
@@ -795,156 +744,147 @@
                         </div>
                     `).join("")}
                 </div>
-                ${disableActions ? '' : `<button class="btn btn-primary" ${state.lovers.length === 2 ? "" : "disabled"} onclick="
+                <button class="btn btn-primary" ${state.lovers.length === 2 ? "" : "disabled"} onclick="
                     state.gamePlayers.forEach(p => p.isLover = state.lovers.includes(p.id));
                     nextNightStep();
-                ">Valider les amoureux ›</button>`}
+                ">Valider les amoureux ›</button>
             `;
         } else if (currentStep === "garde") {
             contentHtml = `
                 <h2>🛡️ Réveil du Garde</h2>
-                <p class="phase-subtitle">Choisissez un joueur à protéger cette nuit contre les attaques.</p>
+                <p class="phase-subtitle">Le MJ choisit un joueur à protéger.</p>
                 <div class="select-list">
                     ${alivePlayers.map(p => `
-                        <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="if(${disableActions}) return; state.selectedTarget = ${p.id}; if(state.gameMode==='network') broadcastState(); render();">
+                        <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
                             <span>${p.name}</span>
                         </div>
                     `).join("")}
                 </div>
-                ${disableActions ? '' : `<button class="btn btn-primary" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
+                <button class="btn btn-primary" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
                     state.nightActions.protected = state.selectedTarget;
                     nextNightStep();
-                ">Protéger ce joueur ›</button>`}
+                ">Protéger ce joueur ›</button>
             `;
         } else if (currentStep === "corbeau") {
             contentHtml = `
                 <h2>🐦‍⬛ Réveil du Corbeau</h2>
-                <p class="phase-subtitle">Désignez un joueur qui écopera d'une voix de pénalité au prochain vote.</p>
+                <p class="phase-subtitle">Le MJ maudit un joueur pour le vote.</p>
                 <div class="select-list">
                     ${alivePlayers.map(p => `
-                        <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="if(${disableActions}) return; state.selectedTarget = ${p.id}; if(state.gameMode==='network') broadcastState(); render();">
+                        <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
                             <span>${p.name}</span>
                         </div>
                     `).join("")}
                 </div>
-                ${disableActions ? '' : `<button class="btn btn-primary" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
+                <button class="btn btn-primary" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
                     state.nightActions.corbeauTarget = state.selectedTarget;
                     nextNightStep();
-                ">Maudire ce joueur ›</button>`}
+                ">Maudire ce joueur ›</button>
             `;
         } else if (currentStep === "voyante") {
             contentHtml = `
                 <h2>🔮 Réveil de la Voyante</h2>
-                <p class="phase-subtitle">Espionnez la carte d'un joueur en vie.</p>
+                <p class="phase-subtitle">Le MJ consulte secrètement l'identité d'un joueur.</p>
                 <div class="select-list">
-                    ${alivePlayers.filter(p => p.role !== "voyante").map(p => `
-                        <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="if(${disableActions}) return; state.selectedTarget = ${p.id}; if(state.gameMode==='network') broadcastState(); render();">
+                    ${alivePlayers.map(p => `
+                        <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
                             <span>${p.name}</span>
                             <span>${state.selectedTarget === p.id ? ROLES_DEF[p.role].icon + ' ' + ROLES_DEF[p.role].name : '❓'}</span>
                         </div>
                     `).join("")}
                 </div>
-                ${disableActions ? '' : `<button class="btn btn-primary" ${state.selectedTarget !== null ? "" : "disabled"} onclick="nextNightStep()">J'ai vu l'identité ›</button>`}
+                <button class="btn btn-primary" ${state.selectedTarget !== null ? "" : "disabled"} onclick="nextNightStep()">Continuer ›</button>
             `;
         } else if (currentStep === "loups") {
             contentHtml = `
-                <h2>🐺 Attaque de la Meute</h2>
-                <p class="phase-subtitle">Les loups-garous désignent une victime commune.</p>
+                <h2>🐺 Réveil des Loups-Garous</h2>
+                <p class="phase-subtitle">Le MJ désigne la victime des loups.</p>
                 <div class="select-list">
                     ${alivePlayers.map(p => `
-                        <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="if(${disableActions}) return; state.selectedTarget = ${p.id}; if(state.gameMode==='network') broadcastState(); render();">
+                        <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
                             <span>${p.name}</span>
                         </div>
                     `).join("")}
                 </div>
-                ${disableActions ? '' : `<button class="btn btn-danger" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
+                <button class="btn btn-danger" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
                     state.nightActions.wolfVictim = state.selectedTarget;
                     nextNightStep();
-                ">Désigner la victime ›</button>`}
+                ">Valider la victime des loups ›</button>
             `;
         } else if (currentStep === "infect") {
             contentHtml = `
                 <h2>🩸 Infect Père des Loups</h2>
-                <p class="phase-subtitle">Voulez-vous infecter la victime des loups pour la convertir ?</p>
-                ${disableActions ? '<p class="dim center">L\'hôte choisit...</p>' : `<div style="display:flex; gap:10px; margin-top:20px;">
+                <p class="phase-subtitle">Voulez-vous infecter la victime ?</p>
+                <div style="display:flex; gap:10px; margin-top:20px;">
                     <button class="btn btn-danger" onclick="
                         state.nightActions.infected = state.nightActions.wolfVictim;
                         nextNightStep();
-                    ">Infecter la victime</button>
+                    ">Infecter</button>
                     <button class="btn btn-ghost" onclick="nextNightStep()">Ne pas infecter</button>
-                </div>`}
+                </div>
             `;
         } else if (currentStep === "loup_blanc") {
             contentHtml = `
                 <h2>🐺⚪ Loup Blanc</h2>
-                <p class="phase-subtitle">Vous pouvez dévorer un autre loup-garou cette nuit.</p>
+                <p class="phase-subtitle">Éliminer un autre loup ?</p>
                 <div class="select-list">
-                    ${alivePlayers.filter(p => (p.role === "loup" || p.role === "infect" || p.isInfected) && p.role !== "loup_blanc").map(p => `
-                        <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="if(${disableActions}) return; state.selectedTarget = ${p.id}; if(state.gameMode==='network') broadcastState(); render();">
-                            <span>${p.name} (${ROLES_DEF[p.role].name})</span>
+                    ${alivePlayers.filter(p => p.role === "loup" || p.role === "infect" || p.isInfected).map(p => `
+                        <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
+                            <span>${p.name}</span>
                         </div>
                     `).join("")}
                 </div>
-                ${disableActions ? '' : `<div style="display:flex; gap:10px;">
+                <div style="display:flex; gap:10px;">
                     <button class="btn btn-danger" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
                         state.nightActions.whiteKill = state.selectedTarget;
                         nextNightStep();
-                    ">Éliminer</button>
-                    <button class="btn btn-ghost" onclick="nextNightStep()">Passer mon tour</button>
-                </div>`}
+                    ">Tuer</button>
+                    <button class="btn btn-ghost" onclick="nextNightStep()">Passer</button>
+                </div>
             `;
         } else if (currentStep === "sorciere") {
             const victim = state.gamePlayers.find(p => p.id === state.nightActions.wolfVictim);
             contentHtml = `
                 <h2>🧪 Réveil de la Sorcière</h2>
-                <p class="phase-subtitle">Constatez les dégâts de la nuit...</p>
-                <div style="background: rgba(255, 59, 92, 0.15); border: 2px solid var(--red); padding: 16px; margin-bottom: 20px; text-align: center;">
-                    <p style="color: var(--text-sub); font-size: 1rem; margin-bottom: 8px;">Les loups ont attaqué :</p>
-                    <p style="font-size: 1.5rem; font-weight: bold; color: var(--red); margin: 0;">${victim ? victim.name : "Personne"}</p>
-                </div>
-                ${disableActions ? '<p class="dim center">L\'hôte gère les potions...</p>' : `
-                    ${state.witchPotions.heal && victim ? `
-                        <button class="btn" style="background: var(--green); color: #06210f; margin-bottom:20px;" onclick="
-                            state.nightActions.witchSaved = true;
-                            state.witchPotions.heal = false;
-                            if(state.gameMode==='network') broadcastState();
-                            render();
-                        ">💚 Sauver ${victim.name} avec la potion de vie</button>
-                    ` : ""}
-                    ${state.witchPotions.death ? `
-                        <div class="select-list">
-                            <p style="font-size:1rem; color:var(--text-sub); margin-bottom: 8px;">Utiliser votre potion de mort ?</p>
-                            ${alivePlayers.map(p => `
-                                <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
-                                    <span>${p.name}</span>
-                                </div>
-                            `).join("")}
-                        </div>
-                    ` : ""}
-                    <button class="btn btn-primary" style="margin-top: 16px;" onclick="
-                        if (state.selectedTarget !== null && state.witchPotions.death) {
-                            state.nightActions.witchKill = state.selectedTarget;
-                            state.witchPotions.death = false;
-                        }
-                        nextNightStep();
-                    ">Terminer le tour de la sorcière ›</button>
-                `}
+                <p class="phase-subtitle">Victime des loups : <strong>${victim ? victim.name : "Personne"}</strong></p>
+                ${state.witchPotions.heal && victim ? `
+                    <button class="btn" style="background: var(--green); color: #06210f; margin-bottom:20px;" onclick="
+                        state.nightActions.witchSaved = true;
+                        state.witchPotions.heal = false;
+                        render();
+                    ">💚 Utiliser la potion de vie</button>
+                ` : ""}
+                ${state.witchPotions.death ? `
+                    <div class="select-list">
+                        <p style="font-size:1rem; color:var(--text-sub);">Potion de mort sur :</p>
+                        ${alivePlayers.map(p => `
+                            <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
+                                <span>${p.name}</span>
+                            </div>
+                        `).join("")}
+                    </div>
+                ` : ""}
+                <button class="btn btn-primary" style="margin-top: 16px;" onclick="
+                    if (state.selectedTarget !== null && state.witchPotions.death) {
+                        state.nightActions.witchKill = state.selectedTarget;
+                        state.witchPotions.death = false;
+                    }
+                    nextNightStep();
+                ">Terminer la sorcière ›</button>
             `;
         } else if (currentStep === "joueur_flute") {
             contentHtml = `
                 <h2>🪈 Réveil du Joueur de Flûte</h2>
-                <p class="phase-subtitle">Choisissez 2 joueurs à charmer.</p>
+                <p class="phase-subtitle">Charmer 2 joueurs :</p>
                 <div class="select-list">
                     ${alivePlayers.map(p => `
                         <div class="select-item ${(state.nightActions.charmedTemp || []).includes(p.id) ? 'selected' : ''}" onclick="
-                            if(${disableActions}) return;
                             if(!state.nightActions.charmedTemp) state.nightActions.charmedTemp = [];
                             if(state.nightActions.charmedTemp.includes(${p.id})) {
                                 state.nightActions.charmedTemp = state.nightActions.charmedTemp.filter(id => id !== ${p.id});
                             } else if(state.nightActions.charmedTemp.length < 2) {
                                 state.nightActions.charmedTemp.push(${p.id});
                             }
-                            if(state.gameMode==='network') broadcastState();
                             render();
                         ">
                             <span>${p.name}</span>
@@ -952,32 +892,42 @@
                         </div>
                     `).join("")}
                 </div>
-                ${disableActions ? '' : `<button class="btn btn-primary" onclick="
+                <button class="btn btn-primary" onclick="
                     if(state.nightActions.charmedTemp) {
                         state.nightActions.charmedTemp.forEach(id => {
                             if(!state.charmedPlayerIds.includes(id)) state.charmedPlayerIds.push(id);
                         });
                     }
                     nextNightStep();
-                ">Valider les charmés ›</button>`}
+                ">Valider ›</button>
             `;
         }
 
         return `
-            <h1>🌙 Nuit ${state.nightNumber}</h1>
+            <h1>🌙 Nuit ${state.nightNumber} (MJ)</h1>
             <div class="panel">${contentHtml}</div>
         `;
     }
 
     function renderDay() {
         const disableActions = (state.gameMode === "network" && !isHost);
+        if (disableActions) {
+            return `
+                <h1>☀️ Village de Jour</h1>
+                <div class="panel center">
+                    <h2>Le village se réveille</h2>
+                    <p class="dim" style="margin-top: 10px;">Écoutez le MJ annoncer les événements de la nuit.</p>
+                </div>
+            `;
+        }
+
         let summaryDeaths = "";
         if (state.dayDeaths.length === 0) {
-            summaryDeaths = "<p style='color:var(--green); font-weight:bold; margin:14px 0; text-align:center;'>Le village se réveille... et personne n'est mort cette nuit ! 🎉</p>";
+            summaryDeaths = "<p style='color:var(--green); font-weight:bold; margin:14px 0; text-align:center;'>Personne n'est mort cette nuit ! 🎉</p>";
         } else {
             summaryDeaths = `
                 <div style="margin:14px 0;">
-                    <p style="color:var(--red); font-weight:bold; margin-bottom:8px;">Victimes constatées ce matin :</p>
+                    <p style="color:var(--red); font-weight:bold; margin-bottom:8px;">Victimes :</p>
                     ${state.dayDeaths.map(d => `
                         <div class="select-item dead" style="margin-bottom:6px;">
                             <span>${d.player.name} (${ROLES_DEF[d.player.role].name})</span>
@@ -988,9 +938,6 @@
             `;
         }
 
-        const corbeauTarget = state.gamePlayers.find(p => p.id === state.corbeauTargetId);
-        let corbeauMsg = corbeauTarget ? `<p style="color:var(--amber); font-size:1rem; margin-top:10px; text-align:center;">🐦‍⬛ Le Corbeau a maudit <strong>${corbeauTarget.name}</strong> (1 voix de pénalité au vote) !</p>` : "";
-
         const aliveHtml = state.gamePlayers.map(p => `
             <div class="alive-pill ${p.alive ? '' : 'dead'}">${p.name}</div>
         `).join("");
@@ -1000,126 +947,103 @@
             <p class="phase-subtitle">Cycle du Jour ${state.nightNumber}</p>
             <div class="panel">
                 ${summaryDeaths}
-                ${corbeauMsg}
-                <div class="alive-summary" style="margin-top:15px;">${aliveHtml}</div>
+                <div class="alive-summary">${aliveHtml}</div>
             </div>
-            ${disableActions ? '<p class="center dim">En attente que l\'hôte lance le vote...</p>' : `
-                <button class="btn btn-primary" onclick="
-                    if (state.hunterPending) {
-                        state.screen = 'hunter';
-                    } else {
-                        state.screen = 'vote';
-                    }
-                    state.selectedTarget = null;
-                    if(state.gameMode==='network') broadcastState();
-                    render();
-                ">Passer au vote du village ›</button>
-            `}
+            <button class="btn btn-primary" onclick="
+                if (state.hunterPending) {
+                    state.screen = 'hunter';
+                } else {
+                    state.screen = 'vote';
+                }
+                state.selectedTarget = null;
+                if(state.gameMode==='network') broadcastState();
+                render();
+            ">Passer au vote ›</button>
         `;
     }
 
     function renderVote() {
         const alive = state.gamePlayers.filter(p => p.alive);
         const disableActions = (state.gameMode === "network" && !isHost);
-        const corbeauTarget = state.gamePlayers.find(p => p.id === state.corbeauTargetId);
+        if (disableActions) return `<div class="panel center"><h2>Vote en cours...</h2></div>`;
 
         return `
             <h1>⚖️ Vote du Village</h1>
-            <p class="phase-subtitle">Débattez et désignez l'accusé à condamner au bûcher.</p>
-            ${corbeauTarget ? `<p style="color:var(--amber); font-size:0.95rem; margin-bottom:10px; text-align:center;">⚠️ ${corbeauTarget.name} a 1 voix de pénalité du Corbeau.</p>` : ""}
+            <p class="phase-subtitle">Désignez l'accusé au bûcher.</p>
             <div class="select-list">
                 ${alive.map(p => `
-                    <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="if(${disableActions}) return; state.selectedTarget = ${p.id}; if(state.gameMode==='network') broadcastState(); render();">
-                        <span>${p.name} ${p.id === state.corbeauTargetId ? '🐦‍⬛' : ''}</span>
+                    <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
+                        <span>${p.name}</span>
                         <span>${state.selectedTarget === p.id ? '🔥 Accusé' : ''}</span>
                     </div>
                 `).join("")}
             </div>
-            ${disableActions ? '<p class="center dim">L\'hôte valide l\'exécution...</p>' : `
-                <button class="btn btn-danger" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
-                    const condemned = state.gamePlayers.find(p => p.id === state.selectedTarget);
-                    
-                    if (!state.firstDayVotePassed && condemned.role === 'ange') {
-                        state.winner = 'Ange';
-                        state.screen = 'end';
-                        if(state.gameMode==='network') broadcastState();
-                        render();
-                        return;
-                    }
-                    state.firstDayVotePassed = true;
-                    killPlayer(condemned.id, 'tribunal');
-
-                    if (state.hunterPending) {
-                        state.screen = 'hunter';
-                    } else if (!checkGameEnd()) {
-                        state.nightNumber++;
-                        state.nightStep = 0;
-                        state.nightActions = {};
-                        state.screen = 'night';
-                    }
-                    if(state.gameMode==='network') broadcastState();
+            <button class="btn btn-danger" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
+                const condemned = state.gamePlayers.find(p => p.id === state.selectedTarget);
+                if (!state.firstDayVotePassed && condemned.role === 'ange') {
+                    state.winner = 'Ange';
+                    state.screen = 'end';
                     render();
-                ">Exécuter le joueur condamné</button>
-            `}
+                    return;
+                }
+                state.firstDayVotePassed = true;
+                killPlayer(condemned.id, 'tribunal');
+
+                if (state.hunterPending) {
+                    state.screen = 'hunter';
+                } else if (!checkGameEnd()) {
+                    state.nightNumber++;
+                    state.nightStep = 0;
+                    state.nightActions = {};
+                    state.screen = 'night';
+                }
+                if(state.gameMode==='network') broadcastState();
+                render();
+            ">Exécuter le condamné</button>
         `;
     }
 
     function renderHunter() {
         const alive = state.gamePlayers.filter(p => p.alive);
-        const hunter = state.hunterPending;
         const disableActions = (state.gameMode === "network" && !isHost);
+        if (disableActions) return `<div class="panel center"><h2>Action du Chasseur...</h2></div>`;
 
         return `
             <h1>🏹 Dernier Tir du Chasseur</h1>
-            <p class="phase-subtitle">${hunter ? hunter.name : 'Le Chasseur'} emporte une cible dans sa tombe.</p>
             <div class="select-list">
                 ${alive.map(p => `
-                    <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="if(${disableActions}) return; state.selectedTarget = ${p.id}; if(state.gameMode==='network') broadcastState(); render();">
+                    <div class="select-item ${state.selectedTarget === p.id ? 'selected' : ''}" onclick="state.selectedTarget = ${p.id}; render();">
                         <span>${p.name}</span>
                     </div>
                 `).join("")}
             </div>
-            ${disableActions ? '<p class="center dim">Le joueur choisit sa cible...</p>' : `
-                <button class="btn btn-danger" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
-                    const target = state.gamePlayers.find(p => p.id === state.selectedTarget);
-                    state.hunterPending = null;
-                    killPlayer(target.id, 'balle de chasseur');
-                    if (!checkGameEnd()) {
-                        if (state.screen === 'day') state.screen = 'vote';
-                        else {
-                            state.nightNumber++;
-                            state.nightStep = 0;
-                            state.nightActions = {};
-                            state.screen = 'night';
-                        }
+            <button class="btn btn-danger" ${state.selectedTarget !== null ? "" : "disabled"} onclick="
+                const target = state.gamePlayers.find(p => p.id === state.selectedTarget);
+                state.hunterPending = null;
+                killPlayer(target.id, 'balle de chasseur');
+                if (!checkGameEnd()) {
+                    if (state.screen === 'day') state.screen = 'vote';
+                    else {
+                        state.nightNumber++;
+                        state.nightStep = 0;
+                        state.nightActions = {};
+                        state.screen = 'night';
                     }
-                    if(state.gameMode==='network') broadcastState();
-                    render();
-                ">Tirer sur cette cible ›</button>
-            `}
+                }
+                if(state.gameMode==='network') broadcastState();
+                render();
+            ">Tirer ›</button>
         `;
     }
 
     function renderEnd() {
-        const disableActions = (state.gameMode === "network" && !isHost);
         return `
             <h1>🏆 Fin de Partie</h1>
             <div class="card-reveal" style="margin:20px 0;">
                 <div style="font-size:3rem;">🎉</div>
                 <div class="role-badge">${state.winner} l'emporte !</div>
             </div>
-            <div class="panel">
-                <h2>Tableau récapitulatif</h2>
-                ${state.gamePlayers.map(p => `
-                    <div class="select-item ${p.alive ? '' : 'dead'}" style="margin-bottom:6px;">
-                        <span>${p.name}</span>
-                        <span>${ROLES_DEF[p.role].icon} ${ROLES_DEF[p.role].name} ${p.isInfected ? '(Infecté)' : ''} ${p.isLover ? '❤️' : ''}</span>
-                    </div>
-                `).join("")}
-            </div>
-            ${disableActions ? '<p class="center dim">En attente que l\'hôte relance...</p>' : `
-                <button class="btn btn-primary" onclick="state.screen='setup'; if(state.gameMode==='network') broadcastState(); render();">Nouvelle partie ⟳</button>
-            `}
+            <button class="btn btn-primary" onclick="state.screen='setup'; render();">Nouvelle partie ⟳</button>
         `;
     }
 
