@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#0a0713">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <title>Loup-Garou — Salle d'Arcade</title>
+    <title>Loup-Garou • jeux2soiree</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -241,6 +241,8 @@
         nightStep: 0,
         nightActions: {},
         witchPotions: { heal: true, death: true },
+        witchSavedTemp: false,
+        witchKillTemp: null,
         lovers: [],
         infectedPlayerId: null,
         corbeauTargetId: null,
@@ -481,6 +483,8 @@
         state.nightStep = 0;
         state.nightActions = {};
         state.witchPotions = { heal: true, death: true };
+        state.witchSavedTemp = false;
+        state.witchKillTemp = null;
         state.lovers = [];
         state.infectedPlayerId = null;
         state.corbeauTargetId = null;
@@ -540,6 +544,8 @@
         state.nightStep++;
         state.selectedTarget = null;
         state.wolfVotes = {};
+        state.witchSavedTemp = false;
+        state.witchKillTemp = null;
         state.voyanteRevealedTargetId = null;
         if (state.nightStep >= steps.length) {
             resolveNight();
@@ -561,7 +567,7 @@
                 else if (c === maxVotes) candidates.push(parseInt(t));
             }
             if (candidates.length > 1) {
-                state.tieMessage = "Égalité entre les loups ! Veuillez revoter.";
+                state.tieMessage = "Égalité entre les loups : le vote est annulé. Veuillez revoter.";
                 state.wolfVotes = {};
                 afterHostMutation();
                 return;
@@ -749,12 +755,45 @@
         WOLVES_VOTE(p) { state.wolfVotes[p.playerId] = p.targetId; checkWolvesConsensus(); },
         INFECT_CHOOSE(p) { if (p.infect) state.nightActions.infected = state.nightActions.wolfVictim; advanceNight(); },
         LOUP_BLANC_CHOOSE(p) { if (p.targetId !== null) state.nightActions.whiteKill = p.targetId; advanceNight(); },
-        SORCIERE_SAVE() { state.nightActions.witchSaved = true; state.witchPotions.heal = false; afterHostMutation(); },
-        SORCIERE_FINISH(p) {
-            if (p.killTargetId !== null && state.witchPotions.death) {
-                state.nightActions.witchKill = p.killTargetId;
-                state.witchPotions.death = false;
+        SORCIERE_SAVE() {
+            if (state.witchPotions.heal) {
+                state.witchSavedTemp = !state.witchSavedTemp;
+                afterHostMutation();
             }
+        },
+        SORCIERE_CANCEL_SAVE() {
+            state.witchSavedTemp = false;
+            afterHostMutation();
+        },
+        SORCIERE_CANCEL_KILL() {
+            state.witchKillTemp = null;
+            state.selectedTarget = null;
+            afterHostMutation();
+        },
+        SORCIERE_PASS() {
+            state.witchSavedTemp = false;
+            state.witchKillTemp = null;
+            state.selectedTarget = null;
+            state.nightActions.witchSaved = false;
+            state.nightActions.witchKill = null;
+            advanceNight();
+        },
+        SORCIERE_FINISH(p) {
+            const killTargetId = state.witchKillTemp !== null ? state.witchKillTemp : p.killTargetId;
+            if (state.witchSavedTemp && state.witchPotions.heal) {
+                state.nightActions.witchSaved = true;
+                state.witchPotions.heal = false;
+            } else {
+                state.nightActions.witchSaved = false;
+            }
+            if (killTargetId !== null && state.witchPotions.death) {
+                state.nightActions.witchKill = killTargetId;
+                state.witchPotions.death = false;
+            } else {
+                state.nightActions.witchKill = null;
+            }
+            state.witchSavedTemp = false;
+            state.witchKillTemp = null;
             advanceNight();
         },
         FLUTE_CHOOSE(p) {
@@ -1164,16 +1203,27 @@
                 '<button class="btn btn-ghost" onclick="runAction(\'LOUP_BLANC_CHOOSE\', {targetId: null})">Passer</button></div>';
         } else if (currentStep === "sorciere") {
             const victim = state.gamePlayers.find(p => p.id === state.nightActions.wolfVictim);
+            const selectedKill = state.witchKillTemp !== null ? state.witchKillTemp : state.selectedTarget;
             contentHtml = '<h2>🧪 La Sorcière</h2><p class="phase-subtitle">Victime des loups : <strong>' + (victim ? victim.name : "Personne") + '</strong></p>';
-            if (state.witchPotions.heal && victim) {
+
+            if (state.witchPotions.heal && victim && !state.witchSavedTemp) {
                 contentHtml += '<button class="btn" style="background: var(--green); color: #06210f; margin-bottom:20px;" onclick="runAction(\'SORCIERE_SAVE\', {})">💚 Potion de vie</button>';
+            } else if (state.witchPotions.heal && victim && state.witchSavedTemp) {
+                contentHtml += '<button class="btn btn-ghost" style="margin-bottom:20px;" onclick="runAction(\'SORCIERE_CANCEL_SAVE\', {})">↩️ Annuler la potion de vie</button>';
             }
+
             if (state.witchPotions.death) {
                 contentHtml += '<div class="select-list"><p style="font-size:1rem; color:var(--text-sub);">Potion de mort :</p>' +
-                    alivePlayers.map(p => '<div class="select-item ' + (state.selectedTarget === p.id ? "selected" : "") + '" onclick="state.selectedTarget=' + p.id + '; render();"><span>' + p.name + '</span></div>').join("") +
+                    alivePlayers.map(p => '<div class="select-item ' + (selectedKill === p.id ? "selected" : "") + '" onclick="state.witchKillTemp=' + p.id + '; state.selectedTarget=' + p.id + '; render();"><span>' + p.name + '</span></div>').join("") +
                     '</div>';
+                if (selectedKill !== null) {
+                    contentHtml += '<button class="btn btn-ghost" onclick="runAction(\'SORCIERE_CANCEL_KILL\', {})">↩️ Annuler le choix de la potion de mort</button>';
+                }
             }
-            contentHtml += '<button class="btn btn-primary" style="margin-top: 16px;" onclick="runAction(\'SORCIERE_FINISH\', {killTargetId: state.selectedTarget})">Terminer ›</button>';
+            contentHtml += '<div style="display:flex; gap:10px; margin-top:16px;">' +
+                '<button class="btn btn-primary" style="flex:1;" onclick="runAction(\'SORCIERE_FINISH\', {killTargetId: state.witchKillTemp !== null ? state.witchKillTemp : null})">Valider les choix ›</button>' +
+                '<button class="btn btn-ghost" style="flex:1;" onclick="runAction(\'SORCIERE_PASS\', {})">Passer le tour ›</button>' +
+                '</div>';
         } else if (currentStep === "joueur_flute") {
             contentHtml = '<h2>🪈 Joueur de Flûte</h2><p class="phase-subtitle">Charmer 2 joueurs :</p><div class="select-list">' +
                 alivePlayers.map(p => '<div class="select-item ' + ((state.nightActions.charmedTemp || []).includes(p.id) ? "selected" : "") + '" onclick="toggleCharm(' + p.id + ')"><span>' + p.name + '</span><span>' + ((state.charmedPlayerIds.includes(p.id) || (state.nightActions.charmedTemp || []).includes(p.id)) ? "🎶" : "") + '</span></div>').join("") +
